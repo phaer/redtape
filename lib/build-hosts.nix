@@ -24,6 +24,7 @@ let
   };
 
   loadHost = hostName: hostInfo:
+    builtins.addErrorContext "while building host '${hostName}' (${hostInfo.type})" (
     if hostInfo.type == "custom" then
       import hostInfo.configPath {
         inherit (specialArgs) flake inputs;
@@ -48,7 +49,8 @@ let
         };
       }
     else
-      throw "red-tape: unknown host config type '${hostInfo.type}' for '${hostName}'";
+      throw "red-tape: unknown host config type '${hostInfo.type}' for '${hostName}'"
+    );
 
   classMap = {
     "nixos" = "nixosConfigurations";
