@@ -3,7 +3,7 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    adios.url = "github:adisbladis/adios";
+    adios.url = "github:adisbladis/adios/6754e85bce51ea198fa405394fb5b57d67555e7d";
     systems.url = "github:nix-systems/default";
   };
 
@@ -15,8 +15,8 @@
 
       # red-tape's own outputs (packages, devshells, etc.)
       selfOutputs = redTape.mkFlake {
-        inherit inputs self;
-        src = self;
+        inherit inputs;
+        src = ./.;
         systems = defaultSystems;
       };
     in
