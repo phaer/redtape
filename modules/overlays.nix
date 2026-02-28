@@ -1,20 +1,17 @@
-# /overlays — Per-system overlay builder
+# /overlays — System-agnostic overlay builder
 #
-# Each .nix file should return a nixpkgs overlay (final: prev: { ... }).
-# Files receive the standard callPackage scope: { pkgs, system, pname, lib, ... }
+# No /nixpkgs dependency — overlays are functions (final: prev: { ... }),
+# not derivations. Evaluated once by adios, memoized across system overrides.
+#
+# Files may accept { lib, flake, inputs, ... } but NOT pkgs/system
+# (overlays receive their own pkgs via final/prev at application time).
 
 { types, ... }:
 let
-  inherit (builtins) mapAttrs;
-
   callFile = import ../lib/call-file.nix;
 in
 {
   name = "overlays";
-
-  inputs = {
-    nixpkgs = { path = "/nixpkgs"; };
-  };
 
   options = {
     discovered = {
@@ -27,19 +24,15 @@ in
     };
   };
 
-  impl = { inputs, options, ... }:
+  impl = { options, ... }:
     let
-      scope = {
-        pkgs = inputs.nixpkgs.pkgs;
-        system = inputs.nixpkgs.system;
-        lib = inputs.nixpkgs.pkgs.lib;
-      } // options.extraScope;
+      scope = options.extraScope;
 
       buildOverlay = pname: entry:
         let path = if entry.type == "directory" then entry.path + "/default.nix" else entry.path;
         in callFile scope path { inherit pname; };
     in
     {
-      overlays = mapAttrs buildOverlay options.discovered;
+      overlays = builtins.mapAttrs buildOverlay options.discovered;
     };
 }

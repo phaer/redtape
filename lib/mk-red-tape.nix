@@ -49,8 +49,8 @@ let
     // (if discovered.packages != {} then { packages  = callMod ../modules/packages.nix; } else {})
     // (if discovered.devshells != {} then { devshells = callMod ../modules/devshells.nix; } else {})
     // (if discovered.checks != {} then { checks = callMod ../modules/checks.nix; } else {})
-    // (if discovered.overlays != {} then { overlays = callMod ../modules/overlays.nix; } else {})
     // (if discovered.hosts != {} then { hosts = callMod ../modules/hosts.nix; } else {})
+    // (if discovered.overlays != {} then { overlays = callMod ../modules/overlays.nix; } else {})
     // (if discovered.modules != {} then { modules-export = callMod ../modules/modules-export.nix; } else {})
     // extraModules;
 
@@ -63,7 +63,7 @@ let
   # Build adios options — only emits entries for modules in the tree.
   mkOptions =
     { modules, discovered, configOptions
-    , extraScope ? {}
+    , extraScope ? {}, agnosticScope ? {}
     , flakeInputs ? {}, self ? null
     }: nixpkgsOpt:
     { "/nixpkgs" = nixpkgsOpt;
@@ -78,11 +78,11 @@ let
     // (if modules ? checks then {
       "/checks" = { discovered = discovered.checks; inherit extraScope; };
     } else {})
-    // (if modules ? overlays then {
-      "/overlays" = { discovered = discovered.overlays; inherit extraScope; };
-    } else {})
     // (if modules ? hosts then {
       "/hosts" = { discovered = discovered.hosts; inherit flakeInputs self; };
+    } else {})
+    // (if modules ? overlays then {
+      "/overlays" = { discovered = discovered.overlays; extraScope = agnosticScope; };
     } else {})
     // (if modules ? modules-export then {
       "/modules-export" = { discovered = discovered.modules; inherit flakeInputs self; };
@@ -99,7 +99,6 @@ let
       devResult = if has "devshells" then mods.devshells {}  else { devShells = {}; };
       fmtResult = mods.formatter {};
       chkResult = if has "checks"    then mods.checks {}     else { checks = {}; };
-      ovlResult = if has "overlays"  then mods.overlays {}   else { overlays = {}; };
 
       packageChecks =
         withPrefix "pkgs-" pkgResult.filteredPackages
@@ -120,8 +119,7 @@ let
       devShells = devResult.devShells;
       formatter = fmtResult.formatter;
       checks = packageChecks // devshellChecks // chkResult.checks;
-    }
-    // (if ovlResult.overlays != {} then { overlays = ovlResult.overlays; } else {});
+    };
 
   # Collect system-agnostic results (evaluated once, not transposed).
   collectAgnostic = evaled:
@@ -129,9 +127,12 @@ let
       mods = evaled.modules;
       has = name: mods ? ${name};
       hostResult = if has "hosts" then mods.hosts {} else {};
+      ovlResult = if has "overlays" then mods.overlays {} else {};
       modExpResult = if has "modules-export" then mods.modules-export {} else {};
     in
-    hostResult // modExpResult;
+    hostResult
+    // (if ovlResult != {} then { overlays = ovlResult.overlays; } else {})
+    // modExpResult;
 
   # Import lib, handling both function and plain attrset forms
   importLib = { libPath, flake ? null, inputs ? {} }:
@@ -186,13 +187,15 @@ let
             inherit overlays;
           };
 
+      agnosticScope = mkExtraScope { inherit flakeInputs self; };
+
       mkOpts = system:
         let
           perSystem = mkPerSystem flakeInputs self system;
           extraScope = mkExtraScope { inherit flakeInputs self perSystem; };
         in
         mkOptions {
-          inherit modules discovered configOptions extraScope flakeInputs self;
+          inherit modules discovered configOptions extraScope agnosticScope flakeInputs self;
         } {
           inherit system;
           pkgs = nixpkgsFor system;
