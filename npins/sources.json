@@ -1,0 +1,24 @@
+{
+  "pins": {
+    "adios": {
+      "type": "Git",
+      "repository": {
+        "type": "GitHub",
+        "owner": "adisbladis",
+        "repo": "adios"
+      },
+      "branch": "master",
+      "submodules": false,
+      "revision": "6754e85bce51ea198fa405394fb5b57d67555e7d",
+      "url": "https://github.com/adisbladis/adios/archive/6754e85bce51ea198fa405394fb5b57d67555e7d.tar.gz",
+      "hash": "0f7m95fnqalxn232l6w8inn3k6ziwis61f44nhdnj906md58gcbz"
+    },
+    "nixpkgs": {
+      "type": "Channel",
+      "name": "nixpkgs-unstable",
+      "url": "https://releases.nixos.org/nixpkgs/nixpkgs-26.05pre905319.f720de590661/nixexprs.tar.xz",
+      "hash": "07n4hhch0j6n69b0zchdjg0l80z2xrdk7k57ykv90cvhklim5dz1"
+    }
+  },
+  "version": 5
+}
