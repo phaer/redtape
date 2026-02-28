@@ -56,6 +56,7 @@ in
         formatter = result.formatter;
         hosts = result.hosts;
         modules = result.modules;
+        overlays = result.overlays;
         templates = result.templates;
       };
     expected = {
@@ -65,8 +66,26 @@ in
       formatter = null;
       hosts = {};
       modules = {};
+      overlays = {};
       templates = {};
     };
+  };
+
+  # --- Overlays ---
+
+  testDiscoverOverlays = {
+    expr = builtins.attrNames (discover (fixtures + "/simple")).overlays;
+    expected = [ "my-overlay" ];
+  };
+
+  testDiscoverOverlayNix = {
+    expr = builtins.attrNames (discover (fixtures + "/full")).overlays;
+    expected = [ "default" ];
+  };
+
+  testNoOverlays = {
+    expr = (discover (fixtures + "/minimal")).overlays;
+    expected = {};
   };
 
   # --- Hosts ---
@@ -74,7 +93,7 @@ in
   testDiscoverHosts = {
     expr = builtins.sort builtins.lessThan
       (builtins.attrNames (discover (fixtures + "/full")).hosts);
-    expected = [ "custom" "myhost" ];
+    expected = [ "custom" "myhost" "mymac" ];
   };
 
   testHostConfigTypes = {
@@ -82,10 +101,12 @@ in
       let hosts = (discover (fixtures + "/full")).hosts;
       in {
         myhost = hosts.myhost.type;
+        mymac = hosts.mymac.type;
         custom = hosts.custom.type;
       };
     expected = {
       myhost = "nixos";
+      mymac = "custom";  # default.nix escape hatch
       custom = "custom";
     };
   };

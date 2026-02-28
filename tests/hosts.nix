@@ -8,20 +8,43 @@ let
     self = null;
   };
 
-  # Only test the custom host — nixos/darwin need real nixpkgs
-  customOnly = buildHosts {
-    custom = (discover (fixtures + "/full")).hosts.custom;
+  fullHosts = (discover (fixtures + "/full")).hosts;
+
+  # Both custom and mymac use the escape hatch (avoids real nixpkgs/nix-darwin)
+  testHosts = buildHosts {
+    inherit (fullHosts) custom mymac;
   };
 in
 {
   testCustomHostLoaded = {
-    expr = customOnly.nixosConfigurations.custom._type;
+    expr = testHosts.nixosConfigurations.custom._type;
     expected = "test-nixos-system";
   };
 
   testCustomHostName = {
-    expr = customOnly.nixosConfigurations.custom.hostName;
+    expr = testHosts.nixosConfigurations.custom.hostName;
     expected = "custom";
+  };
+
+  testDarwinHostLoaded = {
+    expr = testHosts.darwinConfigurations.mymac._type;
+    expected = "test-darwin-system";
+  };
+
+  testDarwinHostName = {
+    expr = testHosts.darwinConfigurations.mymac.hostName;
+    expected = "mymac";
+  };
+
+  # nixos and darwin are separated correctly
+  testDarwinNotInNixos = {
+    expr = testHosts.nixosConfigurations ? mymac;
+    expected = false;
+  };
+
+  testNixosNotInDarwin = {
+    expr = testHosts.darwinConfigurations ? custom;
+    expected = false;
   };
 
   testEmptyHosts = {
@@ -37,10 +60,12 @@ in
       let hosts = (discover (fixtures + "/full")).hosts;
       in {
         myhost = hosts.myhost.type;
+        mymac = hosts.mymac.type;
         custom = hosts.custom.type;
       };
     expected = {
       myhost = "nixos";
+      mymac = "custom";  # uses default.nix escape hatch
       custom = "custom";
     };
   };
