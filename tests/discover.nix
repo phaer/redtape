@@ -72,10 +72,9 @@ in
   # --- Hosts ---
 
   testDiscoverHosts = {
-    expr =
-      let hosts = (discover (fixtures + "/full")).hosts;
-      in builtins.sort builtins.lessThan (builtins.attrNames hosts);
-    expected = [ "custom" "myhost" "mymac" ];
+    expr = builtins.sort builtins.lessThan
+      (builtins.attrNames (discover (fixtures + "/full")).hosts);
+    expected = [ "custom" "myhost" ];
   };
 
   testHostConfigTypes = {
@@ -83,27 +82,12 @@ in
       let hosts = (discover (fixtures + "/full")).hosts;
       in {
         myhost = hosts.myhost.type;
-        mymac = hosts.mymac.type;
+        custom = hosts.custom.type;
       };
     expected = {
       myhost = "nixos";
-      mymac = "darwin";
+      custom = "custom";
     };
-  };
-
-  testHostUsers = {
-    expr =
-      let hosts = (discover (fixtures + "/full")).hosts;
-      in builtins.sort builtins.lessThan
-        (builtins.attrNames hosts.myhost.users);
-    expected = [ "alice" "bob" ];
-  };
-
-  testHostNoUsers = {
-    expr =
-      let hosts = (discover (fixtures + "/full")).hosts;
-      in hosts.mymac.users;
-    expected = {};
   };
 
   # --- Modules ---

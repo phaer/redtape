@@ -1,10 +1,10 @@
 # build-hosts.nix — Build host configurations from discovered hosts
 #
-# Returns: { nixosConfigurations, darwinConfigurations, systemConfigs }
-# Each is { hostname = configValue; }
+# Returns: { nixosConfigurations, darwinConfigurations }
 #
-# Host configs receive { flake, inputs, hostName, perSystem } via specialArgs.
-# This function is called by the entry point, not inside an adios module.
+# Host configs receive { flake, inputs, hostName } via specialArgs.
+# custom hosts (default.nix) are an escape hatch — they return
+# { class, value } and are classified by class.
 
 { flakeInputs, self }:
 
@@ -17,7 +17,6 @@ let
     ;
 
   specialArgs = {
-    inherit (flakeInputs) nixpkgs;
     flake = self;
     inputs = flakeInputs // (if self != null then { self = self; } else {});
   };
@@ -46,39 +45,12 @@ let
           specialArgs = specialArgs // { inherit hostName; };
         };
       }
-    else if hostInfo.type == "system-manager" then
-      let
-        system-manager = flakeInputs.system-manager
-          or (throw "red-tape: host '${hostName}' uses system-configuration.nix but inputs.system-manager is missing");
-      in {
-        class = "system-manager";
-        value = system-manager.lib.makeSystemConfig {
-          modules = [ hostInfo.path ];
-          extraSpecialArgs = specialArgs // { inherit hostName; };
-        };
-      }
-    else if hostInfo.type == "rpi" then
-      let
-        nixos-raspberrypi = flakeInputs.nixos-raspberrypi
-          or (throw "red-tape: host '${hostName}' uses rpi-configuration.nix but inputs.nixos-raspberrypi is missing");
-      in {
-        class = "nixos";
-        value = nixos-raspberrypi.lib.nixosSystem {
-          modules = [ hostInfo.path ];
-          specialArgs = specialArgs // { inherit hostName; };
-        };
-      }
-    else if hostInfo.type == "home-only" then
-      # No host configuration, only home-manager users (standalone)
-      null
     else
       throw "red-tape: unknown host config type '${hostInfo.type}' for '${hostName}'";
 
-  # Classify by output category
   classMap = {
     "nixos" = "nixosConfigurations";
     "nix-darwin" = "darwinConfigurations";
-    "system-manager" = "systemConfigs";
   };
 
 in
@@ -86,24 +58,18 @@ discoveredHosts:
 let
   loaded = mapAttrs loadHost discoveredHosts;
 
-  # Filter out nulls (home-only hosts)
-  nonNull = listToAttrs (filter (x: x.value != null)
-    (map (name: { inherit name; value = loaded.${name}; }) (attrNames loaded)));
-
-  # Group by class
   mkCategory = category:
     listToAttrs (filter (x: x != null)
       (map (name:
-        let host = nonNull.${name};
+        let host = loaded.${name};
         in
         if (classMap.${host.class} or null) == category then
           { inherit name; value = host.value; }
         else
           null
-      ) (attrNames nonNull)));
+      ) (attrNames loaded)));
 in
 {
   nixosConfigurations = mkCategory "nixosConfigurations";
   darwinConfigurations = mkCategory "darwinConfigurations";
-  systemConfigs = mkCategory "systemConfigs";
 }

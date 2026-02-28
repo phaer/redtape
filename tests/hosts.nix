@@ -3,7 +3,6 @@ let
   discover = import ../modules/discover.nix;
   fixtures = ../tests/fixtures;
 
-  # Test with custom escape hatch (doesn't require real nixpkgs.lib.nixosSystem)
   buildHosts = import ../lib/build-hosts.nix {
     flakeInputs = {};
     self = null;
@@ -30,22 +29,18 @@ in
     expected = {
       nixosConfigurations = {};
       darwinConfigurations = {};
-      systemConfigs = {};
     };
   };
 
-  # Discovery correctly identifies host types
   testHostDiscoveryTypes = {
     expr =
       let hosts = (discover (fixtures + "/full")).hosts;
       in {
         myhost = hosts.myhost.type;
-        mymac = hosts.mymac.type;
         custom = hosts.custom.type;
       };
     expected = {
       myhost = "nixos";
-      mymac = "darwin";
       custom = "custom";
     };
   };
