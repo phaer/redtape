@@ -1,12 +1,13 @@
-# /checks — Per-system check assembler
+# /checks — Per-system check builder
 #
 # Only handles user-defined checks from the checks/ directory.
 # Auto-checks from packages and devshells are assembled by the entry point.
 
 { types, ... }:
 let
-  inherit (builtins) mapAttrs intersectAttrs functionArgs;
+  inherit (builtins) mapAttrs;
 
+  callFile = import ../lib/call-file.nix;
   filterPlatforms = import ../lib/filter-platforms.nix;
 in
 {
@@ -30,26 +31,16 @@ in
   impl = { inputs, options, ... }:
     let
       system = inputs.nixpkgs.system;
-      pkgs = inputs.nixpkgs.pkgs;
 
-      baseScope = {
-        inherit pkgs system;
-        lib = pkgs.lib;
+      scope = {
+        pkgs = inputs.nixpkgs.pkgs;
+        inherit system;
+        lib = inputs.nixpkgs.pkgs.lib;
       } // options.extraScope;
 
-      callFile = path: extraArgs:
-        let
-          fn = import path;
-          args = functionArgs fn;
-          allArgs = baseScope // extraArgs;
-        in
-        fn (intersectAttrs args allArgs);
-
       userChecks = filterPlatforms system (mapAttrs (pname: entry:
-        let
-          path = if entry.type == "directory" then entry.path + "/default.nix" else entry.path;
-        in
-        callFile path { inherit pname; }
+        let path = if entry.type == "directory" then entry.path + "/default.nix" else entry.path;
+        in callFile scope path { inherit pname; }
       ) options.discovered);
     in
     {

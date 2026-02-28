@@ -4,7 +4,9 @@
 
 { types, ... }:
 let
-  inherit (builtins) mapAttrs intersectAttrs functionArgs;
+  inherit (builtins) mapAttrs;
+
+  callFile = import ../lib/call-file.nix;
 in
 {
   name = "devshells";
@@ -26,27 +28,15 @@ in
 
   impl = { inputs, options, ... }:
     let
-      pkgs = inputs.nixpkgs.pkgs;
-      system = inputs.nixpkgs.system;
-
-      baseScope = {
-        inherit pkgs system;
-        lib = pkgs.lib;
+      scope = {
+        pkgs = inputs.nixpkgs.pkgs;
+        system = inputs.nixpkgs.system;
+        lib = inputs.nixpkgs.pkgs.lib;
       } // options.extraScope;
 
-      callFile = path: extraArgs:
-        let
-          fn = import path;
-          args = functionArgs fn;
-          allArgs = baseScope // extraArgs;
-        in
-        fn (intersectAttrs args allArgs);
-
       buildShell = pname: entry:
-        let
-          path = if entry.type == "directory" then entry.path + "/default.nix" else entry.path;
-        in
-        callFile path { inherit pname; };
+        let path = if entry.type == "directory" then entry.path + "/default.nix" else entry.path;
+        in callFile scope path { inherit pname; };
     in
     {
       devShells = mapAttrs buildShell options.discovered;

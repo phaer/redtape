@@ -4,7 +4,7 @@
 
 { types, ... }:
 let
-  inherit (builtins) intersectAttrs functionArgs;
+  callFile = import ../lib/call-file.nix;
 in
 {
   name = "formatter";
@@ -14,7 +14,6 @@ in
   };
 
   options = {
-    # null if no formatter.nix was discovered
     formatterPath = {
       type = types.any;
       default = null;
@@ -29,23 +28,16 @@ in
     let
       pkgs = inputs.nixpkgs.pkgs;
 
-      baseScope = {
+      scope = {
         inherit pkgs;
         system = inputs.nixpkgs.system;
         lib = pkgs.lib;
       } // options.extraScope;
-
-      callFile = path:
-        let
-          fn = import path;
-          args = functionArgs fn;
-        in
-        fn (intersectAttrs args baseScope);
     in
     {
       formatter =
         if options.formatterPath != null then
-          callFile options.formatterPath
+          callFile scope options.formatterPath {}
         else
           pkgs.nixfmt-tree or pkgs.nixfmt or
             (throw "red-tape: no formatter.nix found and nixfmt-tree is not available in nixpkgs");
