@@ -1,6 +1,9 @@
-# build-modules.nix — Export discovered modules
+# build-modules.nix — Export discovered modules as flake outputs
 #
-# Returns: { modules, nixosModules, darwinModules, homeModules }
+# Returns: { nixosModules, darwinModules, homeModules }
+# Only well-known types get top-level aliases. Other types are
+# accessible via modules.<type>.<name> (not exported to flake outputs
+# since there's no standard flake output for arbitrary module types).
 #
 # Supports publisher-args injection: if a module file is a function
 # accepting { flake } and/or { inputs }, those are called before export.
@@ -16,9 +19,11 @@ let
     mapAttrs
     ;
 
+  allInputs = flakeInputs // (if self != null then { self = self; } else {});
+
   publisherArgs = {
     flake = self;
-    inputs = flakeInputs // (if self != null then { self = self; } else {});
+    inputs = allInputs;
   };
 
   # Check if a value is a function that explicitly takes publisher args.
@@ -30,7 +35,6 @@ let
     && builtins.all (arg: builtins.elem arg (attrNames publisherArgs))
       (attrNames args);
 
-  # Import a module path, injecting publisher args if needed
   importModule = entry:
     let
       path = if entry.type == "directory" then entry.path + "/default.nix" else entry.path;
@@ -41,7 +45,6 @@ let
     else
       path;
 
-  # Well-known type aliases
   typeAliases = {
     nixos = "nixosModules";
     darwin = "darwinModules";
@@ -51,17 +54,16 @@ let
 in
 discoveredModules:
 let
-  # modules.<type>.<name> = imported module
-  modules = mapAttrs (_type: entries:
+  allModules = mapAttrs (_type: entries:
     mapAttrs (_name: importModule) entries
   ) discoveredModules;
 
-  # Well-known aliases at the top level
+  # Only emit well-known aliases as flake outputs
   aliases = builtins.foldl' (acc: typeName:
     let alias = typeAliases.${typeName} or null;
     in if alias != null && discoveredModules ? ${typeName}
-       then acc // { ${alias} = modules.${typeName}; }
+       then acc // { ${alias} = allModules.${typeName}; }
        else acc
   ) {} (attrNames discoveredModules);
 in
-{ inherit modules; } // aliases
+aliases

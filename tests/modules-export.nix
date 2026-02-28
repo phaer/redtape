@@ -11,60 +11,42 @@ let
   empty = buildModules (discover (fixtures + "/empty")).modules;
 in
 {
-  # modules.<type>.<name> structure
-  testModuleTypes = {
-    expr = builtins.sort builtins.lessThan (builtins.attrNames full.modules);
-    expected = [ "darwin" "home" "nixos" ];
+  # Well-known aliases are the only output keys
+  testOutputKeys = {
+    expr = builtins.sort builtins.lessThan (builtins.attrNames full);
+    expected = [ "darwinModules" "homeModules" "nixosModules" ];
   };
 
   testNixosModuleNames = {
-    expr = builtins.sort builtins.lessThan
-      (builtins.attrNames full.modules.nixos);
+    expr = builtins.sort builtins.lessThan (builtins.attrNames full.nixosModules);
     expected = [ "injected" "server" ];
   };
 
   testHomeModuleNames = {
-    expr = builtins.attrNames full.modules.home;
-    expected = [ "shared" ];
-  };
-
-  testDarwinModuleNames = {
-    expr = builtins.attrNames full.modules.darwin;
-    expected = [ "defaults" ];
-  };
-
-  # Well-known aliases
-  testNixosModulesAlias = {
-    expr = builtins.sort builtins.lessThan
-      (builtins.attrNames full.nixosModules);
-    expected = [ "injected" "server" ];
-  };
-
-  testDarwinModulesAlias = {
-    expr = builtins.attrNames full.darwinModules;
-    expected = [ "defaults" ];
-  };
-
-  testHomeModulesAlias = {
     expr = builtins.attrNames full.homeModules;
     expected = [ "shared" ];
   };
 
+  testDarwinModuleNames = {
+    expr = builtins.attrNames full.darwinModules;
+    expected = [ "defaults" ];
+  };
+
   # Plain modules (no publisher args) are re-exported as paths
   testPlainModuleIsPath = {
-    expr = builtins.isPath full.modules.nixos.server;
+    expr = builtins.isPath full.nixosModules.server;
     expected = true;
   };
 
   # Publisher-args modules are called and return a function (the inner module)
   testInjectedModuleIsFunction = {
-    expr = builtins.isFunction full.modules.nixos.injected;
+    expr = builtins.isFunction full.nixosModules.injected;
     expected = true;
   };
 
-  # Empty project
+  # Empty project produces no output
   testEmptyModules = {
-    expr = empty.modules;
+    expr = empty;
     expected = {};
   };
 }
