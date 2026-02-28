@@ -16,21 +16,23 @@ let
     mapAttrs
     ;
 
+  allInputs = flakeInputs // (if self != null then { self = self; } else {});
+
   specialArgs = {
     flake = self;
-    inputs = flakeInputs // (if self != null then { self = self; } else {});
+    inputs = allInputs;
   };
 
   loadHost = hostName: hostInfo:
     if hostInfo.type == "custom" then
-      import hostInfo.path {
+      import hostInfo.configPath {
         inherit (specialArgs) flake inputs;
         inherit hostName;
       }
     else if hostInfo.type == "nixos" then {
       class = "nixos";
       value = flakeInputs.nixpkgs.lib.nixosSystem {
-        modules = [ hostInfo.path ];
+        modules = [ hostInfo.configPath ];
         specialArgs = specialArgs // { inherit hostName; };
       };
     }
@@ -41,7 +43,7 @@ let
       in {
         class = "nix-darwin";
         value = nix-darwin.lib.darwinSystem {
-          modules = [ hostInfo.path ];
+          modules = [ hostInfo.configPath ];
           specialArgs = specialArgs // { inherit hostName; };
         };
       }
