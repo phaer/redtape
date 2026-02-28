@@ -2,7 +2,7 @@
 
 ## Summary
 
-Convention-based Nix project builder on [adios](https://github.com/msteen/adios).
+Convention-based Nix project builder on [adios](https://github.com/adisbladis/adios).
 Filesystem layout drives output generation. Adios provides memoization across
 systems and explicit dependency tracking.
 
@@ -17,26 +17,34 @@ Entry point (mk-red-tape.nix)
 │
 ├── discover(src)                ← pure function, runs once
 │   Returns paths for packages, devshells, checks, formatter,
-│   hosts, modules, templates, lib
+│   hosts, modules, overlays, templates, lib
 │
-├── adios module tree (per-system, overridden per system):
-│   /nixpkgs    ← data-only: { system, pkgs }
-│   /packages   ← callPackage discovered package files
-│   /devshells  ← build discovered devshell files
-│   /formatter  ← formatter derivation (fallback nixfmt-tree)
-│   /checks     ← user-defined checks
+├── adios module tree:
+│   Per-system (depend on /nixpkgs, re-evaluated per system):
+│   ├── /nixpkgs    ← data-only: { system, pkgs }
+│   ├── /packages   ← callPackage discovered package files
+│   ├── /devshells  ← build discovered devshell files
+│   ├── /formatter  ← formatter derivation (fallback nixfmt-tree)
+│   └── /checks     ← user-defined checks
 │
-├── System-agnostic assembly (plain functions, outside adios):
-│   build-hosts     ← nixosConfigurations, darwinConfigurations
-│   build-modules   ← nixosModules, darwinModules, homeModules
-│   build-templates ← templates with descriptions
-│   lib export      ← lib/default.nix
+│   System-agnostic (no /nixpkgs dep, memoized across overrides):
+│   ├── /hosts          ← nixosConfigurations, darwinConfigurations
+│   ├── /overlays       ← nixpkgs overlays (functions, not derivations)
+│   └── /modules-export ← nixosModules, darwinModules, homeModules
+│
+├── Plain functions (outside adios):
+│   ├── build-templates ← templates with descriptions
+│   └── lib export      ← lib/default.nix
 │
 └── Result assembly
     ← auto-checks from packages/devshells
     ← transpose per-system → flake shape
     ← merge system-agnostic outputs
 ```
+
+All modules except `/nixpkgs` and `/formatter` are conditional — only
+included when the corresponding directory or file is discovered. An empty
+project has just nixpkgs + formatter in the tree.
 
 ### Why discovery is a plain function
 
@@ -53,16 +61,14 @@ lazy evaluation resolves `self` references naturally.
 
 ### Multi-system memoization
 
-First system: full `eval`. Subsequent systems: `override` changes `/nixpkgs`.
-Adios skips re-evaluation of modules whose inputs haven't changed. Currently
-all per-system modules depend on `/nixpkgs`, so the benefit is limited. Future
-system-agnostic adios modules (if added) would benefit more.
+First system: full eval. Subsequent systems: `override` changes `/nixpkgs`.
+Adios skips re-evaluation of modules whose inputs haven't changed.
+System-agnostic modules (hosts, overlays, modules-export) are evaluated
+once and shared across all system overrides.
 
 ---
 
-## Core (always active)
-
-Per-system outputs through adios modules:
+## Per-system outputs (adios modules)
 
 | Convention | Output | CallPackage args |
 |-----------|--------|-----------------|
@@ -76,18 +82,22 @@ Auto-checks assembled in entry point:
 - `packages.foo.passthru.tests.bar` → `checks.pkgs-foo-bar`
 - `devShells.default` → `checks.devshell-default`
 
-## Auto-discovered (if present)
-
-System-agnostic, assembled outside adios:
+## System-agnostic outputs (adios modules, memoized)
 
 | Convention | Output |
 |-----------|--------|
 | `hosts/*/configuration.nix` | `nixosConfigurations.*` |
 | `hosts/*/darwin-configuration.nix` | `darwinConfigurations.*` |
 | `hosts/*/default.nix` | escape hatch (returns `{ class, value }`) |
+| `overlay.nix` / `overlays/` | `overlays.*` |
 | `modules/nixos/` | `nixosModules.*` |
 | `modules/darwin/` | `darwinModules.*` |
 | `modules/home/` | `homeModules.*` |
+
+## System-agnostic outputs (plain functions)
+
+| Convention | Output |
+|-----------|--------|
 | `templates/*/` | `templates.*` |
 | `lib/default.nix` | `lib` |
 
@@ -97,7 +107,6 @@ System-agnostic, assembled outside adios:
 - System-manager hosts
 - Raspberry Pi hosts
 - TOML devshells
-- adios-contrib compatibility
 
 ---
 
@@ -117,9 +126,18 @@ host specialArgs.
 
 **D5. Flat `config` parameter** — maps to adios tree options directly.
 
-**D6. Minimal core** — per-system packages/devshells/formatter/checks only.
-Hosts, modules, templates, lib are auto-discovered but implemented as plain
-functions, not adios modules.
+**D6. Minimal core** — packages, devshells, formatter, checks are per-system
+adios modules. Hosts, overlays, modules-export are system-agnostic adios
+modules. Templates and lib are plain functions.
+
+**D7. Overlays are system-agnostic** — they're functions (`final: prev: {}`),
+not derivations. No `/nixpkgs` dependency, evaluated once.
+
+**D8. DRY per-system modules** — `mk-per-system-module` factory extracts
+the shared scope + callFile + mapAttrs pattern.
+
+**D9. Flake reuses npins** — `flake.nix` does `import ./. {}`, no flake
+inputs. npins is the single source of truth (same pattern as adios).
 
 ---
 
@@ -127,29 +145,31 @@ functions, not adios modules.
 
 ```
 red-tape/
-├── flake.nix               # Flake entry point
-├── default.nix             # Traditional entry point
-├── shell.nix               # Dev shell
+├── flake.nix                    # import ./. {} + lib wrapper
+├── default.nix                  # Traditional entry: { mkFlake, eval }
+├── shell.nix                    # Dev shell
 ├── modules/
-│   ├── nixpkgs.nix         # Data-only: system + pkgs
-│   ├── discover.nix        # Pure function: filesystem scan
-│   ├── packages.nix        # Per-system package builder (conditional)
-│   ├── devshells.nix       # Per-system devshell builder (conditional)
-│   ├── formatter.nix       # Per-system formatter (always present)
-│   └── checks.nix          # Per-system user checks (conditional)
+│   ├── discover.nix             # Pure function: filesystem scan
+│   ├── nixpkgs.nix              # Data-only: system + pkgs
+│   ├── packages.nix             # Per-system packages (conditional)
+│   ├── devshells.nix            # Per-system devshells (conditional)
+│   ├── formatter.nix            # Per-system formatter (always present)
+│   ├── checks.nix               # Per-system checks (conditional)
+│   ├── overlays.nix             # System-agnostic overlays (conditional)
+│   ├── hosts.nix                # System-agnostic hosts (conditional)
+│   └── modules-export.nix       # System-agnostic module export (conditional)
 ├── lib/
-│   ├── mk-red-tape.nix     # Core: tree + result assembly
-│   ├── call-file.nix       # Shared callPackage-style invocation
-│   ├── scan-dir.nix        # readDir scanner
-│   ├── scan-hosts.nix      # Host directory scanner
-│   ├── filter-platforms.nix # meta.platforms filter
-│   ├── transpose.nix       # Per-system → flake shape
-│   ├── build-hosts.nix     # Host config dispatch
-│   ├── build-modules.nix   # Module export (well-known aliases only)
-│   └── build-templates.nix # Template export
+│   ├── mk-red-tape.nix          # Core: tree + result assembly
+│   ├── mk-per-system-module.nix # Factory for per-system modules
+│   ├── call-file.nix            # callPackage-style invocation
+│   ├── scan-dir.nix             # readDir scanner
+│   ├── scan-hosts.nix           # Host directory scanner
+│   ├── filter-platforms.nix     # meta.platforms filter
+│   ├── transpose.nix            # Per-system → flake shape
+│   └── build-templates.nix      # Template export
 └── tests/
-    ├── prelude.nix          # Shared test setup
-    ├── *.nix                # Test suites (12 files, 72 tests)
-    ├── run.sh               # Test runner
-    └── fixtures/            # Mock project trees
+    ├── prelude.nix              # Shared test setup
+    ├── *.nix                    # 12 test suites, 84 tests
+    ├── run.sh                   # Test runner
+    └── fixtures/                # Mock project trees
 ```
