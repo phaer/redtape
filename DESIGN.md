@@ -127,28 +127,29 @@ functions, not adios modules.
 
 ```
 red-tape/
-├── flake.nix              # Flake entry point
-├── default.nix            # Traditional entry point
-├── shell.nix              # Dev shell
+├── flake.nix               # Flake entry point
+├── default.nix             # Traditional entry point
+├── shell.nix               # Dev shell
 ├── modules/
-│   ├── nixpkgs.nix        # Data-only: system + pkgs
-│   ├── discover.nix       # Pure function: filesystem scan
-│   ├── packages.nix       # Per-system package builder
-│   ├── devshells.nix      # Per-system devshell builder
-│   ├── formatter.nix      # Per-system formatter
-│   └── checks.nix         # Per-system user checks
+│   ├── nixpkgs.nix         # Data-only: system + pkgs
+│   ├── discover.nix        # Pure function: filesystem scan
+│   ├── packages.nix        # Per-system package builder (conditional)
+│   ├── devshells.nix       # Per-system devshell builder (conditional)
+│   ├── formatter.nix       # Per-system formatter (always present)
+│   └── checks.nix          # Per-system user checks (conditional)
 ├── lib/
-│   ├── mk-red-tape.nix    # Core: tree + result assembly
-│   ├── scan-dir.nix       # readDir scanner
-│   ├── scan-hosts.nix     # Host directory scanner
-│   ├── filter-platforms.nix
-│   ├── transpose.nix      # Per-system → flake shape
-│   ├── build-hosts.nix    # Host config dispatch
-│   ├── build-modules.nix  # Module export + aliases
+│   ├── mk-red-tape.nix     # Core: tree + result assembly
+│   ├── call-file.nix       # Shared callPackage-style invocation
+│   ├── scan-dir.nix        # readDir scanner
+│   ├── scan-hosts.nix      # Host directory scanner
+│   ├── filter-platforms.nix # meta.platforms filter
+│   ├── transpose.nix       # Per-system → flake shape
+│   ├── build-hosts.nix     # Host config dispatch
+│   ├── build-modules.nix   # Module export (well-known aliases only)
 │   └── build-templates.nix # Template export
 └── tests/
-    ├── prelude.nix         # Shared test setup
-    ├── *.nix               # Test suites
-    ├── run.sh              # Test runner
-    └── fixtures/           # Mock project trees
+    ├── prelude.nix          # Shared test setup
+    ├── *.nix                # Test suites (12 files, 72 tests)
+    ├── run.sh               # Test runner
+    └── fixtures/            # Mock project trees
 ```
