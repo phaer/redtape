@@ -92,7 +92,7 @@ let
   # Collect per-system results from the evaluated tree.
   collectPerSystem = { evaled, system }:
     let
-      mods = evaled.root.modules;
+      mods = evaled.modules;
       has = name: mods ? ${name};
 
       pkgResult = if has "packages"  then mods.packages {}  else { filteredPackages = {}; };
@@ -126,7 +126,7 @@ let
   # Collect system-agnostic results (evaluated once, not transposed).
   collectAgnostic = evaled:
     let
-      mods = evaled.root.modules;
+      mods = evaled.modules;
       has = name: mods ? ${name};
       hostResult = if has "hosts" then mods.hosts {} else {};
       modExpResult = if has "modules-export" then mods.modules-export {} else {};
@@ -199,7 +199,7 @@ let
         };
 
       firstSystem = head systems;
-      firstEvaled = loaded.eval { options = mkOpts firstSystem; };
+      firstEvaled = loaded { options = mkOpts firstSystem; };
       firstResult = collectPerSystem { evaled = firstEvaled; system = firstSystem; };
 
       otherResults = listToAttrs (map (sys:
@@ -266,7 +266,7 @@ let
         inherit modules discovered configOptions extraScope;
       } { inherit system pkgs; };
 
-      evaled = loaded.eval { options = opts; };
+      evaled = loaded { options = opts; };
       result = collectPerSystem { inherit evaled system; };
       agnostic = collectAgnostic evaled;
 

@@ -1,36 +1,23 @@
 {
   description = "red-tape — convention-based project builder on adios";
 
-  inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    adios.url = "github:adisbladis/adios/6754e85bce51ea198fa405394fb5b57d67555e7d";
-    systems.url = "github:nix-systems/default";
-  };
-
-  outputs = inputs@{ self, nixpkgs, adios, systems, ... }:
+  # No flake inputs — reuse npins sources (same as adios itself)
+  outputs = { ... }:
     let
-      adiosLib = adios.adios;
-      redTape = import ./lib/mk-red-tape.nix { adios = adiosLib; };
-      defaultSystems = import systems;
-
-      # red-tape's own outputs (packages, devshells, etc.)
-      selfOutputs = redTape.mkFlake {
-        inherit inputs;
-        src = ./.;
-        systems = defaultSystems;
-      };
+      imported = import ./. {};
     in
-    selfOutputs // {
-      # Export the library for consumers
-      lib = redTape // {
-        # Make red-tape callable: inputs.red-tape { inherit inputs; }
+    {
+      # Make red-tape callable: inputs.red-tape { inherit inputs; }
+      lib = imported // {
         __functor = _: args:
-          redTape.mkFlake (args // {
-            systems = args.systems or defaultSystems;
+          imported.mkFlake (args // {
+            systems = args.systems or [
+              "x86_64-linux"
+              "aarch64-linux"
+              "aarch64-darwin"
+              "x86_64-darwin"
+            ];
           });
       };
-
-      # Re-export adios for consumers that need it
-      inherit (adios) adios;
     };
 }

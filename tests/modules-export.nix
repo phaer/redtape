@@ -14,7 +14,7 @@ let
           modules-export = callMod ../modules/modules-export.nix;
         };
       };
-      evaled = loaded.eval {
+      evaled = loaded {
         options = {
           "/modules-export" = {
             discovered = discoveredModules;
@@ -24,7 +24,7 @@ let
         };
       };
     in
-    evaled.root.modules.modules-export {};
+    evaled.modules.modules-export {};
 
   full = evalModulesExport (discover (fixtures + "/full")).modules;
   empty = evalModulesExport (discover (fixtures + "/empty")).modules;

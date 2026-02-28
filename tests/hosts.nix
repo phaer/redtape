@@ -17,7 +17,7 @@ let
           hosts = callMod ../modules/hosts.nix;
         };
       };
-      evaled = loaded.eval {
+      evaled = loaded {
         options = {
           "/hosts" = {
             discovered = discoveredHosts;
@@ -27,7 +27,7 @@ let
         };
       };
     in
-    evaled.root.modules.hosts {};
+    evaled.modules.hosts {};
 
   # Both custom and mymac use the escape hatch
   testResult = evalHosts {

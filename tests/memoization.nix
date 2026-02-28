@@ -5,19 +5,14 @@
 # 2. Memoizes modules that DON'T depend on changed inputs
 # 3. Produces correct results for all systems
 #
-# All per-system modules depend on /nixpkgs, so memoization benefits
-# system-independent adios modules (if any are added). Discovery and
-# system-agnostic outputs are already outside the tree.
-#
-# These tests verify the adios memoization mechanism itself works correctly
-# with our module patterns, using builtins.trace to detect re-evaluation
-# through evalParams.results (the memoized path).
+# We can't directly observe memoization (no evalParams in current API),
+# but we verify the override mechanism produces correct results — which
+# is the observable guarantee adios provides.
 
 let
   prelude = import ./prelude.nix;
   inherit (prelude) adios;
 
-  # Set up a tree with both pure and system-dependent modules
   loaded = adios {
     name = "memo-test";
     modules = {
@@ -39,7 +34,6 @@ let
       };
 
       # System-independent: no /nixpkgs dependency
-      # (Models any future system-independent adios modules)
       pure = {
         name = "pure";
         options.data = { type = adios.types.attrs; default = { answer = 42; }; };
@@ -53,7 +47,7 @@ let
 
   discovered = { hello = {}; };
 
-  e1 = loaded.eval {
+  e1 = loaded {
     options = {
       "/nixpkgs" = { system = "x86_64-linux"; pkgs = {}; };
       "/packages" = { inherit discovered; };
@@ -80,9 +74,9 @@ in
   # System-dependent module correctly changes per system
   testSystemDependentChanges = {
     expr = {
-      sys1 = e1.evalParams.results."/packages".system;
-      sys2 = e2.evalParams.results."/packages".system;
-      sys3 = e3.evalParams.results."/packages".system;
+      sys1 = (e1.modules.packages {}).system;
+      sys2 = (e2.modules.packages {}).system;
+      sys3 = (e3.modules.packages {}).system;
     };
     expected = {
       sys1 = "x86_64-linux";
@@ -91,30 +85,25 @@ in
     };
   };
 
-  # Pure module produces identical results via evalParams across all systems
-  # (adios memoizes the result — only evaluated once)
-  testPureMemoizedAcrossSystems = {
+  # Pure module produces identical results across all systems
+  testPureIdenticalAcrossSystems = {
     expr = {
-      e1 = e1.evalParams.results."/pure".computed;
-      e2 = e2.evalParams.results."/pure".computed;
-      e3 = e3.evalParams.results."/pure".computed;
-      identical12 = e1.evalParams.results."/pure" == e2.evalParams.results."/pure";
-      identical23 = e2.evalParams.results."/pure" == e3.evalParams.results."/pure";
+      e1 = (e1.modules.pure {}).computed;
+      e2 = (e2.modules.pure {}).computed;
+      e3 = (e3.modules.pure {}).computed;
     };
     expected = {
       e1 = 84;
       e2 = 84;
       e3 = 84;
-      identical12 = true;
-      identical23 = true;
     };
   };
 
   # Discovered data preserved across overrides
   testDiscoveredPreservedAcrossOverrides = {
     expr = {
-      sys1 = e1.evalParams.results."/packages".names;
-      sys2 = e2.evalParams.results."/packages".names;
+      sys1 = (e1.modules.packages {}).names;
+      sys2 = (e2.modules.packages {}).names;
     };
     expected = {
       sys1 = [ "hello" ];
@@ -124,16 +113,16 @@ in
 
   # Override chain: e1 results unchanged after e2/e3 creation
   testFirstEvalStableAfterOverrides = {
-    expr = e1.evalParams.results."/packages".system;
+    expr = (e1.modules.packages {}).system;
     expected = "x86_64-linux";
   };
 
-  # Module functor calls also produce correct results
+  # Module functor calls produce correct results
   testFunctorCallsCorrect = {
     expr = {
-      r1 = (e1.root.modules.packages {}).system;
-      r2 = (e2.root.modules.packages {}).system;
-      pure = (e1.root.modules.pure {}).computed;
+      r1 = (e1.modules.packages {}).system;
+      r2 = (e2.modules.packages {}).system;
+      pure = (e1.modules.pure {}).computed;
     };
     expected = {
       r1 = "x86_64-linux";

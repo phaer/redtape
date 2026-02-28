@@ -32,8 +32,8 @@ let
       discovered = discover src;
       modules = mkModules discovered;
       loaded = adios { name = "test"; inherit modules; };
-      evaled = loaded.eval { options = mkOptions discovered; };
-      mods = evaled.root.modules;
+      evaled = loaded { options = mkOptions discovered; };
+      mods = evaled.modules;
 
       pkgResult = if mods ? packages  then mods.packages {}  else { filteredPackages = {}; };
       devResult = if mods ? devshells then mods.devshells {}  else { devShells = {}; };
@@ -139,8 +139,8 @@ in
         discovered = discover src;
         modules = mkModules discovered;
         loaded = adios { name = "test"; inherit modules; };
-        evaled = loaded.eval { options = mkOptions discovered; };
-        result1 = evaled.root.modules.packages {};
+        evaled = loaded { options = mkOptions discovered; };
+        result1 = evaled.modules.packages {};
 
         mockPkgs2 = mockPkgs // { system = "aarch64-linux"; };
         evaled2 = evaled.override {
@@ -148,7 +148,7 @@ in
             "/nixpkgs" = { system = "aarch64-linux"; pkgs = mockPkgs2; };
           };
         };
-        result2 = evaled2.root.modules.packages {};
+        result2 = evaled2.modules.packages {};
       in
       {
         sys1 = builtins.sort builtins.lessThan (builtins.attrNames result1.filteredPackages);
