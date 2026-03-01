@@ -13,7 +13,7 @@ Supports both flakes and traditional `default.nix` (npins/niv).
 ## Architecture
 
 ```
-Entry point (mk-red-tape.nix)
+Entry point (default.nix)
 │
 ├── discover(src)                ← pure function, runs once
 │   Returns paths for packages, devshells, checks, formatter,
@@ -33,8 +33,8 @@ Entry point (mk-red-tape.nix)
 │   └── /modules-export ← nixosModules, darwinModules, homeModules
 │
 ├── Plain functions (outside adios):
-│   ├── build-templates ← templates with descriptions
-│   └── lib export      ← lib/default.nix
+│   ├── buildTemplates ← templates with descriptions
+│   └── importLib      ← lib/default.nix
 │
 └── Result assembly
     ← auto-checks from packages/devshells
@@ -133,11 +133,12 @@ modules. Templates and lib are plain functions.
 **D7. Overlays are system-agnostic** — they're functions (`final: prev: {}`),
 not derivations. No `/nixpkgs` dependency, evaluated once.
 
-**D8. DRY per-system modules** — `mk-per-system-module` factory extracts
-the shared scope + callFile + mapAttrs pattern.
+**D8. Single file** — everything lives in `default.nix` (~500 sloc).
+`flake.nix` is just `import ./. {}` + a `lib` wrapper. No `lib/` or
+`modules/` directories. Adios module definitions are inline values.
 
-**D9. Flake reuses npins** — `flake.nix` does `import ./. {}`, no flake
-inputs. npins is the single source of truth (same pattern as adios).
+**D9. Flake reuses npins** — `flake.nix` has no flake inputs.
+npins is the single source of truth (same pattern as adios).
 
 ---
 
@@ -145,31 +146,20 @@ inputs. npins is the single source of truth (same pattern as adios).
 
 ```
 red-tape/
-├── flake.nix                    # import ./. {} + lib wrapper
-├── default.nix                  # Traditional entry: { mkFlake, eval }
-├── shell.nix                    # Dev shell
-├── modules/
-│   ├── discover.nix             # Pure function: filesystem scan
-│   ├── nixpkgs.nix              # Data-only: system + pkgs
-│   ├── packages.nix             # Per-system packages (conditional)
-│   ├── devshells.nix            # Per-system devshells (conditional)
-│   ├── formatter.nix            # Per-system formatter (always present)
-│   ├── checks.nix               # Per-system checks (conditional)
-│   ├── overlays.nix             # System-agnostic overlays (conditional)
-│   ├── hosts.nix                # System-agnostic hosts (conditional)
-│   └── modules-export.nix       # System-agnostic module export (conditional)
-├── lib/
-│   ├── mk-red-tape.nix          # Core: tree + result assembly
-│   ├── mk-per-system-module.nix # Factory for per-system modules
-│   ├── call-file.nix            # callPackage-style invocation
-│   ├── scan-dir.nix             # readDir scanner
-│   ├── scan-hosts.nix           # Host directory scanner
-│   ├── filter-platforms.nix     # meta.platforms filter
-│   ├── transpose.nix            # Per-system → flake shape
-│   └── build-templates.nix      # Template export
+├── default.nix    # Everything: scanning, modules, mkFlake, eval (~500 sloc)
+├── flake.nix      # import ./. {} + lib functor wrapper (~20 sloc)
+├── shell.nix      # Dev shell
 └── tests/
     ├── prelude.nix              # Shared test setup
     ├── *.nix                    # 12 test suites, 84 tests
     ├── run.sh                   # Test runner
     └── fixtures/                # Mock project trees
 ```
+
+`default.nix` sections (in order):
+1. Utilities (`callFile`, `filterPlatforms`, `withPrefix`, `mkAllInputs`)
+2. Directory scanning (`scanDir`, `scanHosts`, `scanModuleTypes`, `scanTemplates`, `discover`)
+3. Result assembly helpers (`transpose`, `buildTemplates`, `importLib`)
+4. Adios module definitions (inline attrsets: `modNixpkgs`, `mkPerSystemMod`, `modPackages`, …)
+5. Module tree assembly (`mkModules`, `mkOptions`, `collectPerSystem`, `collectAgnostic`)
+6. Entry points (`mkFlake`, `eval`)
