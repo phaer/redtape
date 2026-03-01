@@ -425,6 +425,9 @@ let
       checks    = packageChecks // withPrefix "devshell-" devResult.devShells // chkResult.checks;
     };
 
+  # Known per-system module names — their results are transposed, not merged here
+  perSystemModuleNames = [ "nixpkgs" "packages" "devshells" "formatter" "checks" ];
+
   collectAgnostic = evaled:
     let
       mods = evaled.modules;
@@ -432,8 +435,18 @@ let
       hostResult   = if has "hosts"          then mods.hosts {}          else {};
       ovlResult    = if has "overlays"       then mods.overlays {}       else {};
       modExpResult = if has "modules-export" then mods.modules-export {} else {};
+
+      # Collect results from any extra modules not handled above.
+      # Users can add custom system-agnostic modules via extraModules and their
+      # results are automatically merged into the top-level flake outputs.
+      knownNames = perSystemModuleNames ++ [ "hosts" "overlays" "modules-export" ];
+      extraResults = foldl' (acc: name:
+        if elem name knownNames then acc
+        else acc // (mods.${name} {})
+      ) {} (attrNames mods);
     in
-    hostResult
+    extraResults
+    // hostResult
     // (if ovlResult != {} then { overlays = ovlResult.overlays; } else {})
     // modExpResult;
 
@@ -543,7 +556,7 @@ let
 
 in
 {
-  inherit mkFlake eval;
+  inherit mkFlake eval adios;
 
   # Exposed for tests — not part of the public API
   _internal = {
