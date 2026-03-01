@@ -520,3 +520,101 @@ integrations, or are already invested in its ecosystem.
 
 Same outputs. The red-tape version has a 5-line `flake.nix` and no
 registration boilerplate — the filesystem *is* the configuration.
+
+## Comparison with blueprint
+
+[blueprint](https://github.com/numtide/blueprint) is the closest relative
+to red-tape — both are convention-based and share the same core idea.
+If you've used blueprint, here's what's the same, what's different, and
+why you might choose one over the other.
+
+### What's the same
+
+The filesystem conventions are nearly identical:
+
+| Convention | blueprint | red-tape |
+|-----------|-----------|----------|
+| `package.nix` | `packages.default` | `packages.default` |
+| `packages/<name>.nix` | `packages.<name>` | `packages.<name>` |
+| `packages/<name>/default.nix` | `packages.<name>` | `packages.<name>` |
+| `devshell.nix` | `devShells.default` | `devShells.default` |
+| `devshells/<name>.nix` | `devShells.<name>` | `devShells.<name>` |
+| `formatter.nix` | `formatter` | `formatter` |
+| `checks/<name>.nix` | `checks.<name>` | `checks.<name>` |
+| `hosts/*/configuration.nix` | `nixosConfigurations.*` | `nixosConfigurations.*` |
+| `hosts/*/darwin-configuration.nix` | `darwinConfigurations.*` | `darwinConfigurations.*` |
+| `hosts/*/default.nix` | escape hatch `{ class, value }` | escape hatch `{ class, value }` |
+| `modules/nixos/<name>.nix` | `nixosModules.<name>` | `nixosModules.<name>` |
+| `modules/darwin/<name>.nix` | `darwinModules.<name>` | `darwinModules.<name>` |
+| `modules/home/<name>.nix` | `homeModules.<name>` | `homeModules.<name>` |
+| `templates/<name>/` | `templates.<name>` | `templates.<name>` |
+| `lib/default.nix` | `lib` | `lib` |
+
+Per-system file arguments are also identical: `pkgs`, `lib`, `system`,
+`pname`, `flake`, `inputs`, `perSystem`.
+
+A blueprint project can be migrated to red-tape (or vice versa) by
+changing a single line in `flake.nix`.
+
+### What's different
+
+#### Auto-checks
+
+Both wire packages as checks. Blueprint also wires NixOS/darwin host
+closures as checks (`checks.<system>.nixos-<hostname>`). Red-tape does
+not — system closures are expensive to build and belong in CI configuration
+rather than `nix flake check`.
+
+#### Overlays
+
+Red-tape adds `overlay.nix` / `overlays/` → `overlays.*`, which blueprint
+doesn't support. Blueprint has no `overlays` flake output convention.
+
+#### Formatter fallback
+
+Red-tape falls back to `nixfmt-tree` when no `formatter.nix` exists.
+Blueprint requires an explicit `formatter.nix`.
+
+#### Modules re-export
+
+Blueprint also exposes `modules.<type>.<name>` for all module types, not
+just the well-known ones. Red-tape only re-exports the three well-known
+aliases (`nixosModules`, `darwinModules`, `homeModules`).
+
+#### Features red-tape intentionally omits
+
+| Feature | Blueprint | Red-tape |
+|---------|-----------|----------|
+| TOML devshells | ✓ (via `devshells/<name>.toml`) | ✗ |
+| Home-manager users under hosts | ✓ (`hosts/*/users/*.nix`) | ✗ |
+| System-manager hosts | ✓ (`hosts/*/system-configuration.nix`) | ✗ |
+| Raspberry Pi hosts | ✓ (`hosts/*/rpi-configuration.nix`) | ✗ |
+
+These belong in contrib modules and aren't part of red-tape's core.
+
+#### Implementation
+
+Blueprint is ~400 lines of Nix using `lib.genAttrs` for multi-system
+evaluation, with no special memoization — every system is evaluated
+independently.
+
+Red-tape uses [adios](https://github.com/adisbladis/adios) for memoization:
+the first system is evaluated in full, subsequent systems reuse that
+evaluation and only re-run modules that depend on `system`/`pkgs`. System-
+agnostic work (hosts, overlays, module re-export) is evaluated exactly once.
+
+#### Flake inputs
+
+Blueprint requires `nixpkgs` and `systems` as flake inputs. Red-tape has
+no flake inputs at all — its dependencies are pinned via npins internally,
+and consumers provide their own `nixpkgs` through the `inputs` argument.
+
+### When to use which
+
+**Use red-tape** if you want the same conventions with adios memoization,
+overlays support, a minimal formatter fallback, and no dependency on the
+blueprint flake.
+
+**Use blueprint** if you need home-manager user auto-wiring, TOML devshells,
+system-manager or Raspberry Pi hosts, or prefer a more actively maintained
+upstream with a larger community.
