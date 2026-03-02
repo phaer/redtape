@@ -8,12 +8,11 @@ let
     let
       found = discover.discoverAll src;
       scope = { pkgs = mockPkgs; system = sys; lib = mockPkgs.lib; };
-
-      packages  = if found.packages  != null then filterPlatforms sys (buildAll scope found.packages)  else {};
-      devShells = if found.devshells  != null then buildAll scope found.devshells  else {};
-      checks    = if found.checks     != null then filterPlatforms sys (buildAll scope found.checks) else {};
-      overlays  = if found.overlays   != null then buildAll { flake = null; inputs = {}; } found.overlays else {};
-      formatter = if found.formatter  != null then callFile scope found.formatter {} else mockPkgs.nixfmt-tree;
+      packages  = filterPlatforms sys (buildAll scope found.packages);
+      devShells = buildAll scope found.devshells;
+      checks    = filterPlatforms sys (buildAll scope found.checks);
+      overlays  = buildAll { flake = null; inputs = {}; } found.overlays;
+      formatter = if found.formatter != null then callFile scope found.formatter {} else mockPkgs.nixfmt-tree;
     in
     { inherit packages devShells checks overlays formatter; };
 in

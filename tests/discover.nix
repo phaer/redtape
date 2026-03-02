@@ -52,24 +52,24 @@ in
     expr =
       let result = discoverAll (fixtures + "/empty");
       in {
-        hasPackages  = result.packages != null;
-        hasDevshells = result.devshells != null;
-        hasChecks    = result.checks != null;
-        hasHosts     = result.hosts != null;
-        hasOverlays  = result.overlays != null;
-        hasModules   = result.modules != null;
-        formatter    = result.formatter;
-        templates    = result.templates;
+        packages  = result.packages;
+        devshells = result.devshells;
+        checks    = result.checks;
+        hosts     = result.hosts;
+        overlays  = result.overlays;
+        modules   = result.modules;
+        formatter = result.formatter;
+        templates = result.templates;
       };
     expected = {
-      hasPackages  = false;
-      hasDevshells = false;
-      hasChecks    = false;
-      hasHosts     = false;
-      hasOverlays  = false;
-      hasModules   = false;
-      formatter    = null;
-      templates    = {};
+      packages  = {};
+      devshells = {};
+      checks    = {};
+      hosts     = {};
+      overlays  = {};
+      modules   = {};
+      formatter = null;
+      templates = {};
     };
   };
 
@@ -87,7 +87,7 @@ in
 
   testNoOverlays = {
     expr = (discoverAll (fixtures + "/minimal")).overlays;
-    expected = null;
+    expected = {};
   };
 
   # --- Hosts ---
@@ -108,7 +108,7 @@ in
       };
     expected = {
       myhost = "nixos";
-      mymac = "custom";  # default.nix escape hatch
+      mymac = "custom";
       custom = "custom";
     };
   };

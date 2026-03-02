@@ -15,6 +15,6 @@ in
   # Discover at the wrong root sees nothing
   testNoPrefixMissesPackages = {
     expr = (discover.discoverAll (fixtures + "/prefixed")).packages;
-    expected = null;
+    expected = {};
   };
 }

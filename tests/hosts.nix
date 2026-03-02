@@ -5,14 +5,11 @@ let
   inherit (_internal) discover;
   inherit (_internal.builders) buildHosts;
 
-
   fullHosts = (discover.discoverAll (fixtures + "/full")).hosts;
 
   testResult = buildHosts {
-    discovered = {
-      inherit (fullHosts) custom mymac;
-    };
-    flakeInputs = {};
+    discovered = { inherit (fullHosts) custom mymac; };
+    allInputs = {};
     self = null;
   };
 in
@@ -49,7 +46,7 @@ in
 
   testEmptyHosts = {
     expr =
-      let result = buildHosts { discovered = {}; flakeInputs = {}; self = null; };
+      let result = buildHosts { discovered = {}; allInputs = {}; self = null; };
       in {
         inherit (result) nixosConfigurations darwinConfigurations;
         hasAutoChecks = builtins.isFunction result.autoChecks;

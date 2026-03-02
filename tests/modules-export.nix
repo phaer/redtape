@@ -7,11 +7,11 @@ let
 
   full = buildModules {
     discovered = (discover.discoverAll (fixtures + "/full")).modules;
-    flakeInputs = {};
+    allInputs = {};
     self = null;
   };
 
-  empty = buildModules { discovered = {}; flakeInputs = {}; self = null; };
+  empty = buildModules { discovered = {}; allInputs = {}; self = null; };
 in
 {
   testOutputKeys = {
@@ -62,10 +62,9 @@ in
     expr =
       let
         fakeSelf = { outPath = "/my/flake"; };
-        fakeInputs = { nixpkgs = "fake-nixpkgs"; };
         result = buildModules {
           discovered = (discover.discoverAll (fixtures + "/full")).modules;
-          flakeInputs = fakeInputs;
+          allInputs = { nixpkgs = "fake-nixpkgs"; self = fakeSelf; };
           self = fakeSelf;
         };
         # The wrapped module function is in imports
