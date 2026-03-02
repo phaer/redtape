@@ -3,7 +3,7 @@
 Convention-based Nix project builder on top of [adios](https://github.com/adisbladis/adios).
 
 Drop `.nix` files in the right directories, get flake outputs with zero boilerplate.
-~500 lines in a single `default.nix`.
+~660 lines in a single `default.nix`.
 
 ## The Problem
 
@@ -374,7 +374,7 @@ Returns `{ packages, devShells, formatter, checks, overlays, shell, ... }`.
 
 ## Architecture
 
-Everything lives in a single `default.nix` (~500 sloc). Built on
+Everything lives in a single `default.nix` (~660 sloc). Built on
 [adios](https://github.com/adisbladis/adios) for evaluation memoization.
 The flake entry point (`flake.nix`) just does `import ./. {}`.
 
