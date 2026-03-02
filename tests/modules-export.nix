@@ -1,28 +1,17 @@
-# Tests for module export via adios module
+# Tests for module export
 let
   prelude = import ./prelude.nix;
-  inherit (prelude) adios _internal fixtures;
-  inherit (_internal) coreDescriptors;
-  discover = src: _internal.discover src coreDescriptors;
+  inherit (prelude) _internal fixtures;
+  inherit (_internal) discover;
+  inherit (_internal.builders) buildModules;
 
-  evalModulesExport = discoveredModules:
-    let
-      loaded = adios {
-        name = "modexp-test";
-        modules.modules-export = _internal.modules.modModulesExport;
-      };
-      evaled = loaded {
-        options."/modules-export" = {
-          discovered = discoveredModules;
-          flakeInputs = {};
-          self = null;
-        };
-      };
-    in
-    evaled.modules.modules-export {};
+  full = buildModules {
+    discovered = (discover.discoverAll (fixtures + "/full")).modules;
+    flakeInputs = {};
+    self = null;
+  };
 
-  full = evalModulesExport (discover (fixtures + "/full")).modules-export;
-  empty = evalModulesExport {};
+  empty = buildModules { discovered = {}; flakeInputs = {}; self = null; };
 in
 {
   testOutputKeys = {

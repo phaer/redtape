@@ -2,27 +2,27 @@
 let
   prelude = import ./prelude.nix;
   inherit (prelude) _internal fixtures;
-  inherit (_internal) coreDescriptors;
-  discover = src: _internal.discover src coreDescriptors;
+  inherit (_internal) discover;
+  inherit (_internal.builders) importLib;
 in
 {
   testLibPresent = {
-    expr = (discover (fixtures + "/full")).lib != null;
+    expr = (discover.discoverAll (fixtures + "/full")).lib != null;
     expected = true;
   };
 
   testLibImport = {
     expr =
       let
-        libPath = (discover (fixtures + "/full")).lib;
-        lib = import libPath { flake = null; inputs = {}; };
+        libPath = (discover.discoverAll (fixtures + "/full")).lib;
+        lib = importLib { inherit libPath; flake = null; inputs = {}; };
       in
       lib.greet "world";
     expected = "Hello, world!";
   };
 
   testNoLib = {
-    expr = (discover (fixtures + "/empty")).lib;
+    expr = (discover.discoverAll (fixtures + "/empty")).lib;
     expected = null;
   };
 
@@ -30,8 +30,8 @@ in
   testPlainLib = {
     expr =
       let
-        libPath = (discover (fixtures + "/plain-lib")).lib;
-        lib = import libPath;
+        libPath = (discover.discoverAll (fixtures + "/plain-lib")).lib;
+        lib = importLib { inherit libPath; };
       in
       lib.add 1 2;
     expected = 3;

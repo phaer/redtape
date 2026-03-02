@@ -1,7 +1,10 @@
 # Edge case tests
 let
   prelude = import ./prelude.nix;
-  inherit (prelude._internal) scanDir filterPlatforms buildTemplates;
+  inherit (prelude) _internal fixtures;
+  inherit (_internal.discover) scanDir;
+  inherit (_internal.util) filterPlatforms;
+  inherit (_internal.builders) buildTemplates;
 in
 {
   # meta.platforms filtering removes packages for wrong system
@@ -20,11 +23,8 @@ in
   # scanDir ignores non-nix files
   testScanDirNixOnly = {
     expr =
-      let
-        # The simple fixture has hello.nix and goodbye/ — both should appear
-        result = scanDir ../tests/fixtures/simple/packages;
-      in
-      builtins.sort builtins.lessThan (builtins.attrNames result);
+      let result = scanDir ../tests/fixtures/simple/packages;
+      in builtins.sort builtins.lessThan (builtins.attrNames result);
     expected = [ "goodbye" "hello" ];
   };
 

@@ -1,7 +1,7 @@
 # red-tape contrib modules
 
-Optional module descriptors for output types outside red-tape's minimal core.
-Pass them via `extraModules` in your `mkFlake` call.
+Optional adios-flake modules for output types outside red-tape's minimal core.
+Pass them via `modules` in your `mkFlake` call.
 
 ## Available modules
 
@@ -11,11 +11,12 @@ Pass them via `extraModules` in your `mkFlake` call.
 
 ## How it works
 
-Contrib modules are **standalone descriptors** — they don't replace the
-core `hosts` module. Each module independently scans the same `hosts/`
-directory for its own filenames. The core hosts module finds
-`configuration.nix` and `darwin-configuration.nix`; the system-manager
-module finds `system-configuration.nix`. No conflicts.
+Contrib modules are standard **adios-flake modules** — they return flake
+output attrsets just like any `perSystem` or `flake` function. Each module
+independently scans the `hosts/` directory for its own sentinel files.
+The core hosts builder finds `configuration.nix` and
+`darwin-configuration.nix`; the system-manager module finds
+`system-configuration.nix`. No conflicts.
 
 ## Usage
 
@@ -32,10 +33,13 @@ module finds `system-configuration.nix`. No conflicts.
     let rt = inputs.red-tape.lib;
     in rt {
       inherit inputs;
-      extraModules.system-manager = import (inputs.red-tape + "/contrib/system-manager.nix") {
-        inherit (rt) adios;
-        scanHosts = rt._internal.scanHosts;
-      };
+      modules = [
+        (import (inputs.red-tape + "/contrib/system-manager.nix") {
+          inherit inputs;
+          src = inputs.self;
+          scanHosts = rt._internal.discover.scanHosts;
+        })
+      ];
     };
 }
 ```
@@ -44,16 +48,27 @@ Then put your system-manager configs in `hosts/<name>/system-configuration.nix`.
 
 ## Writing your own
 
-See the [custom modules section in HOWTO.md](../HOWTO.md#writing-custom-modules).
+A contrib module is just a standard adios-flake module — either an ergonomic
+function or a native adios module. Use `red-tape._internal.discover.scanHosts`
+for host-type scanning or `red-tape._internal.discover.scanDir` for generic
+directory scanning.
 
-A contrib module descriptor is an attrset with:
-
-- **`name`** — unique key (also used as the `extraModules` key)
-- **`discover`** — `src -> value | null` — how to find files on disk
-- **`optionsFn`** — `ctx -> options` — how to wire discovered data into adios options
-- **`options`** — adios typed option declarations
-- **`impl`** — `{ options, ... } -> attrset` — builds the flake outputs
-
-The returned attrset from `impl` is merged into top-level flake outputs
-by `collectAgnostic` (for system-agnostic modules) or transposed across
-systems (for `perSystem = true` modules).
+```nix
+# Example: nix-on-droid support
+{ inputs, src, scanHosts }:
+let
+  discovered = scanHosts (src + "/hosts") [
+    { type = "nix-on-droid"; file = "droid-configuration.nix"; }
+  ];
+in
+{ self, ... }:
+{
+  nixOnDroidConfigurations = builtins.mapAttrs (hostName: hostInfo:
+    inputs.nix-on-droid.lib.nixOnDroidConfiguration {
+      pkgs = import inputs.nixpkgs { system = "aarch64-linux"; };
+      modules = [ hostInfo.configPath ];
+      extraSpecialArgs = { flake = self; inherit (inputs) inputs; inherit hostName; };
+    }
+  ) discovered;
+}
+```

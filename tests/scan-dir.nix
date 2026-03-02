@@ -2,7 +2,7 @@
 let
   prelude = import ./prelude.nix;
   inherit (prelude) _internal fixtures;
-  inherit (_internal) scanDir;
+  inherit (_internal.discover) scanDir;
 in
 {
   # Discovers .nix files and directories with default.nix

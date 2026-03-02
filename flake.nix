@@ -1,13 +1,15 @@
 {
-  description = "red-tape — convention-based project builder on adios";
+  description = "red-tape — convention-based project builder on adios-flake";
 
-  # No flake inputs — reuse npins sources (same as adios itself)
-  outputs = { ... }:
+  inputs = {
+    adios-flake.url = "github:Mic92/adios-flake";
+  };
+
+  outputs = { adios-flake, ... }:
     let
-      imported = import ./. {};
+      imported = import ./. { inherit adios-flake; };
     in
     {
-      # Make red-tape callable: inputs.red-tape.lib { inherit inputs; }
       lib = imported // {
         __functor = _: args:
           imported.mkFlake (args // {

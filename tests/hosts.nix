@@ -1,30 +1,18 @@
-# Tests for host building via adios module
+# Tests for host building
 let
   prelude = import ./prelude.nix;
-  inherit (prelude) adios _internal fixtures;
-  inherit (_internal) coreDescriptors;
-  discover = src: _internal.discover src coreDescriptors;
+  inherit (prelude) _internal fixtures;
+  inherit (_internal) discover;
+  inherit (_internal.builders) buildHosts;
 
-  fullHosts = (discover (fixtures + "/full")).hosts;
+  fullHosts = (discover.discoverAll (fixtures + "/full")).hosts;
 
-  evalHosts = discoveredHosts:
-    let
-      loaded = adios {
-        name = "hosts-test";
-        modules.hosts = _internal.modules.modHosts;
-      };
-      evaled = loaded {
-        options."/hosts" = {
-          discovered = discoveredHosts;
-          flakeInputs = {};
-          self = null;
-        };
-      };
-    in
-    evaled.modules.hosts {};
-
-  testResult = evalHosts {
-    inherit (fullHosts) custom mymac;
+  testResult = buildHosts {
+    discovered = {
+      inherit (fullHosts) custom mymac;
+    };
+    flakeInputs = {};
+    self = null;
   };
 in
 {
@@ -59,16 +47,22 @@ in
   };
 
   testEmptyHosts = {
-    expr = evalHosts {};
+    expr =
+      let result = buildHosts { discovered = {}; flakeInputs = {}; self = null; };
+      in {
+        inherit (result) nixosConfigurations darwinConfigurations;
+        hasAutoChecks = builtins.isFunction result.autoChecks;
+      };
     expected = {
       nixosConfigurations = {};
       darwinConfigurations = {};
+      hasAutoChecks = true;
     };
   };
 
   testHostDiscoveryTypes = {
     expr =
-      let hosts = (discover (fixtures + "/full")).hosts;
+      let hosts = (discover.discoverAll (fixtures + "/full")).hosts;
       in {
         myhost = hosts.myhost.type;
         mymac = hosts.mymac.type;

@@ -1,13 +1,9 @@
 # Test prelude — shared setup for all test files
 let
-  sources = import ../npins;
-  adiosAll = import sources.adios;
-  adios = adiosAll.adios;
+  flake = builtins.getFlake "git+file://${toString ./..}";
+  redTape = flake.lib;
 
-  redTape = import ../. {};
-  inherit (redTape) _internal;
-
-  realPkgs = import sources.nixpkgs { system = "x86_64-linux"; };
+  realPkgs = import <nixpkgs> { system = "x86_64-linux"; };
 
   mockPkgs = {
     system = "x86_64-linux";
@@ -28,6 +24,6 @@ let
   fixtures = ../tests/fixtures;
 in
 {
-  inherit adios redTape realPkgs mockPkgs sys fixtures _internal;
-  types = adios.types;
+  inherit redTape realPkgs mockPkgs sys fixtures;
+  _internal = redTape._internal;
 }

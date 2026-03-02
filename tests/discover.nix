@@ -1,21 +1,21 @@
-# Tests for the discover function
+# Tests for the discover module
 let
   prelude = import ./prelude.nix;
   inherit (prelude) _internal fixtures;
-  inherit (_internal) coreDescriptors;
-  discover = src: _internal.discover src coreDescriptors;
+  inherit (_internal) discover;
+  discoverAll = discover.discoverAll;
 in
 {
   # --- Packages ---
 
   testDiscoverPackages = {
     expr = builtins.sort builtins.lessThan
-      (builtins.attrNames (discover (fixtures + "/simple")).packages);
+      (builtins.attrNames (discoverAll (fixtures + "/simple")).packages);
     expected = [ "goodbye" "hello" ];
   };
 
   testDiscoverPackageNix = {
-    expr = builtins.attrNames (discover (fixtures + "/minimal")).packages;
+    expr = builtins.attrNames (discoverAll (fixtures + "/minimal")).packages;
     expected = [ "default" ];
   };
 
@@ -23,26 +23,26 @@ in
 
   testDiscoverDevshells = {
     expr = builtins.sort builtins.lessThan
-      (builtins.attrNames (discover (fixtures + "/simple")).devshells);
+      (builtins.attrNames (discoverAll (fixtures + "/simple")).devshells);
     expected = [ "backend" "default" ];
   };
 
   # --- Formatter ---
 
   testDiscoverFormatter = {
-    expr = (discover (fixtures + "/simple")).formatter != null;
+    expr = (discoverAll (fixtures + "/simple")).formatter != null;
     expected = true;
   };
 
   testNoFormatter = {
-    expr = (discover (fixtures + "/minimal")).formatter;
+    expr = (discoverAll (fixtures + "/minimal")).formatter;
     expected = null;
   };
 
   # --- Checks ---
 
   testDiscoverChecks = {
-    expr = builtins.attrNames (discover (fixtures + "/simple")).checks;
+    expr = builtins.attrNames (discoverAll (fixtures + "/simple")).checks;
     expected = [ "mycheck" ];
   };
 
@@ -50,14 +50,14 @@ in
 
   testDiscoverEmpty = {
     expr =
-      let result = discover (fixtures + "/empty");
+      let result = discoverAll (fixtures + "/empty");
       in {
-        hasPackages  = result ? packages;
-        hasDevshells = result ? devshells;
-        hasChecks    = result ? checks;
-        hasHosts     = result ? hosts;
-        hasOverlays  = result ? overlays;
-        hasModules   = result ? modules-export;
+        hasPackages  = result.packages != null;
+        hasDevshells = result.devshells != null;
+        hasChecks    = result.checks != null;
+        hasHosts     = result.hosts != null;
+        hasOverlays  = result.overlays != null;
+        hasModules   = result.modules != null;
         formatter    = result.formatter;
         templates    = result.templates;
       };
@@ -76,31 +76,31 @@ in
   # --- Overlays ---
 
   testDiscoverOverlays = {
-    expr = builtins.attrNames (discover (fixtures + "/simple")).overlays;
+    expr = builtins.attrNames (discoverAll (fixtures + "/simple")).overlays;
     expected = [ "my-overlay" ];
   };
 
   testDiscoverOverlayNix = {
-    expr = builtins.attrNames (discover (fixtures + "/full")).overlays;
+    expr = builtins.attrNames (discoverAll (fixtures + "/full")).overlays;
     expected = [ "default" ];
   };
 
   testNoOverlays = {
-    expr = (discover (fixtures + "/minimal")) ? overlays;
-    expected = false;
+    expr = (discoverAll (fixtures + "/minimal")).overlays;
+    expected = null;
   };
 
   # --- Hosts ---
 
   testDiscoverHosts = {
     expr = builtins.sort builtins.lessThan
-      (builtins.attrNames (discover (fixtures + "/full")).hosts);
+      (builtins.attrNames (discoverAll (fixtures + "/full")).hosts);
     expected = [ "custom" "myhost" "mymac" ];
   };
 
   testHostConfigTypes = {
     expr =
-      let hosts = (discover (fixtures + "/full")).hosts;
+      let hosts = (discoverAll (fixtures + "/full")).hosts;
       in {
         myhost = hosts.myhost.type;
         mymac = hosts.mymac.type;
@@ -117,19 +117,19 @@ in
 
   testDiscoverModuleTypes = {
     expr =
-      let mods = (discover (fixtures + "/full")).modules-export;
+      let mods = (discoverAll (fixtures + "/full")).modules;
       in builtins.sort builtins.lessThan (builtins.attrNames mods);
     expected = [ "darwin" "home" "nixos" ];
   };
 
   testDiscoverNixosModules = {
     expr = builtins.sort builtins.lessThan
-      (builtins.attrNames (discover (fixtures + "/full")).modules-export.nixos);
+      (builtins.attrNames (discoverAll (fixtures + "/full")).modules.nixos);
     expected = [ "injected" "server" ];
   };
 
   testDiscoverHomeModules = {
-    expr = builtins.attrNames (discover (fixtures + "/full")).modules-export.home;
+    expr = builtins.attrNames (discoverAll (fixtures + "/full")).modules.home;
     expected = [ "shared" ];
   };
 
@@ -137,19 +137,19 @@ in
 
   testDiscoverTemplates = {
     expr = builtins.sort builtins.lessThan
-      (builtins.attrNames (discover (fixtures + "/full")).templates);
+      (builtins.attrNames (discoverAll (fixtures + "/full")).templates);
     expected = [ "default" "minimal" ];
   };
 
   # --- Lib ---
 
   testDiscoverLib = {
-    expr = (discover (fixtures + "/full")).lib != null;
+    expr = (discoverAll (fixtures + "/full")).lib != null;
     expected = true;
   };
 
   testNoLib = {
-    expr = (discover (fixtures + "/simple")).lib;
+    expr = (discoverAll (fixtures + "/simple")).lib;
     expected = null;
   };
 }
