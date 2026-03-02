@@ -4,48 +4,47 @@ Equivalent projects for comparing red-tape vs blueprint evaluation time.
 
 ## Structure
 
-Both projects have 6 packages, 5 devshells, 5 checks, evaluated across
-4 systems (x86_64-linux, aarch64-linux, x86_64-darwin, aarch64-darwin).
+Both projects have:
+- 6 packages, 6 devshells, 5 checks (per-system)
+- 5 NixOS host configurations (system-agnostic, all x86_64-linux)
+- 5 NixOS modules, lib/default.nix (system-agnostic)
+- red-tape only: 6 overlays
+
+Evaluated across 4 systems (x86_64-linux, aarch64-linux, x86_64-darwin,
+aarch64-darwin).
 
 ## Running
 
 ```console
-# From this directory or bench-blueprint/:
-NIX_SHOW_STATS=1 nix eval .#packages --json --no-eval-cache 2>stats.json >/dev/null
-cat stats.json | grep cpuTime
+./tests/bench.sh              # 5 iterations
+./tests/bench.sh -n 10        # 10 iterations
+./tests/bench.sh -n 1 -v      # 1 iteration, verbose
 ```
 
-## Results
+Uses `nix-eval-jobs --workers 1 --force-recurse` to force full evaluation
+of all derivations — the same workload as CI.
 
-At this scale both take ~265ms wall time and ~700ms CPU — dominated by
-Nix startup and nixpkgs loading. Project evaluation is below noise.
+## Results (typical)
 
-### What adios memoization actually does
+| attribute | framework | 1-sys | 4-sys |
+|-----------|-----------|-------|-------|
+| packages  | red-tape  | ~330ms | ~1010ms |
+| packages  | blueprint | ~315ms | ~1015ms |
+| checks    | red-tape  | ~11.8s | ~17.8s |
+| checks    | blueprint | ~11.7s | ~12.6s |
+| devShells | red-tape  | ~520ms | ~1540ms |
+| devShells | blueprint | ~530ms | ~1530ms |
 
-Adios `override` memoizes `evalParams.results` — the intermediate option
-resolution and dependency wiring. The final `module {}` call in
-`tree.modules.<name> {}` re-runs each time it's forced, because that
-wrapper is a lazy thunk, not a cached result.
+### Key findings
 
-```
-# Even the same eval's module is called fresh each time:
-e1.modules.pure {}   # runs impl
-e1.modules.pure {}   # runs impl again
-e2.modules.pure {}   # runs impl again (override)
-```
+**packages/devShells** — Identical between red-tape and blueprint. These are
+purely per-system; adios memoization provides no benefit here.
 
-The benefit is that option computation and input wiring (the adios
-bookkeeping) is not repeated for modules whose inputs haven't changed.
-For red-tape's modules, that bookkeeping is cheap.
+**checks 1-sys** — Identical. Both now evaluate NixOS host closures as checks
+(`nixos-<hostname>`), which dominates the cost.
 
-### Practical conclusion
-
-The memoization benefit is real but small for projects of typical size.
-Blueprint uses `lib.genAttrs` which re-evaluates each system fully and
-independently — same practical result because Nix's own lazy evaluation
-already deduplicates the expensive parts (importing nixpkgs, evaluating
-package files).
-
-At the project scale where you'd actually feel a difference (hundreds of
-packages, many systems), adios has an architectural advantage. But it's
-not measurable with the current fixture size.
+**checks 4-sys** — Red-tape is ~40% slower. Blueprint scales from 11.7→12.6s
+(+8%) while red-tape goes 11.8→17.8s (+51%). The hosts are all x86_64-linux
+so 3 of 4 systems produce no host checks, but red-tape's `autoChecks` still
+accesses the host module results per system (forcing `hostPlatform` evaluation
+each time). Blueprint resolves this more efficiently.
