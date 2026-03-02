@@ -140,8 +140,8 @@ You only take what you need. `{ pkgs, ... }:` is the common case.
 
 ### Cross-Input Resolution (`perSystem`)
 
-`perSystem` merges `legacyPackages.<system>` and `packages.<system>` from all
-inputs into a flat namespace:
+`perSystem` provides `legacyPackages.<system>` and `packages.<system>` from
+each input, keyed by input name:
 
 ```nix
 # devshell.nix
@@ -152,6 +152,10 @@ pkgs.mkShell {
 ```
 
 This avoids the `inputs.foo.packages.${system}.bar` boilerplate.
+
+> **Note:** `perSystem`, `flake`, and `inputs` are only available in flake
+> mode. Traditional mode (`eval`) receives only `pkgs`, `lib`, `system`,
+> and `pname`.
 
 ## Walkthrough
 
