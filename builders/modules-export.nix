@@ -6,14 +6,22 @@
 # function that accepts only { flake, inputs }, it's called with publisher
 # args at export time (allowing the module to close over the flake).
 # Otherwise the raw path is exported.
-{ discovered, flakeInputs, self }:
+#
+# typeAliases maps directory names to flake output keys.
+# The defaults (nixos→nixosModules, darwin→darwinModules, home→homeModules)
+# can be extended by passing extraTypeAliases.
+{ discovered, flakeInputs, self, extraTypeAliases ? {} }:
 let
   inherit (builtins) all attrNames elem foldl' functionArgs isFunction intersectAttrs mapAttrs;
 
   allInputs     = flakeInputs // (if self != null then { inherit self; } else {});
   publisherArgs = { flake = self; inputs = allInputs; };
 
-  typeAliases = { nixos = "nixosModules"; darwin = "darwinModules"; home = "homeModules"; };
+  typeAliases = {
+    nixos = "nixosModules";
+    darwin = "darwinModules";
+    home = "homeModules";
+  } // extraTypeAliases;
 
   expectsPublisherArgs = fn:
     isFunction fn && (functionArgs fn) != {}

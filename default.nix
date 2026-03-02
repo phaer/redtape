@@ -36,6 +36,7 @@ let
     , perSystem ? null
     , config ? {}
     , flake ? {}
+    , moduleTypeAliases ? {}
     }:
     let
       flakeInputs = builtins.removeAttrs inputs [ "self" ];
@@ -143,7 +144,7 @@ let
         else {};
 
       modExport = if found.modules != null
-        then buildModules { discovered = found.modules; inherit flakeInputs self; }
+        then buildModules { discovered = found.modules; inherit flakeInputs self; extraTypeAliases = moduleTypeAliases; }
         else {};
 
       templates = let t = buildTemplates found.templates;
