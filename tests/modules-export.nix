@@ -39,9 +39,22 @@ in
     expected = true;
   };
 
-  testInjectedModuleIsFunction = {
-    expr = builtins.isFunction full.nixosModules.injected;
-    expected = true;
+  # Injected modules are wrapped with { _file; imports } for error locations
+  testInjectedModuleHasFileLocation = {
+    expr =
+      let mod = full.nixosModules.injected;
+      in {
+        isAttrset = builtins.isAttrs mod;
+        hasFile = mod ? _file;
+        hasImports = mod ? imports;
+        fileEndsWithNix = builtins.match ".*injected\\.nix" mod._file != null;
+      };
+    expected = {
+      isAttrset = true;
+      hasFile = true;
+      hasImports = true;
+      fileEndsWithNix = true;
+    };
   };
 
   # Publisher args are injected at export time
@@ -55,8 +68,9 @@ in
           flakeInputs = fakeInputs;
           self = fakeSelf;
         };
-        # Call the wrapped module to get its body
-        modBody = result.nixosModules.injected {};
+        # The wrapped module function is in imports
+        wrappedFn = builtins.head result.nixosModules.injected.imports;
+        modBody = wrappedFn {};
       in {
         hasFlake = modBody._publisherFlake == fakeSelf;
         hasInputs = modBody._publisherInputs ? nixpkgs;

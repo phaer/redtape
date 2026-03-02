@@ -27,13 +27,17 @@ let
     isFunction fn && (functionArgs fn) != {}
     && all (arg: elem arg (attrNames publisherArgs)) (attrNames (functionArgs fn));
 
+  # Wrap a module so the NixOS module system reports the original file path
+  # in error messages.  Equivalent to lib.setDefaultModuleLocation.
+  setModuleLocation = file: m: { _file = file; imports = [ m ]; };
+
   importModule = entry:
     let
       path = if entry.type == "directory" then entry.path + "/default.nix" else entry.path;
       mod  = import path;
     in
     if expectsPublisherArgs mod
-    then mod (intersectAttrs (functionArgs mod) publisherArgs)
+    then setModuleLocation (toString path) (mod (intersectAttrs (functionArgs mod) publisherArgs))
     else path;
 
   allModules = mapAttrs (_: entries: mapAttrs (_: importModule) entries) discovered;
