@@ -506,7 +506,7 @@ let
 
   # ── Result collection ──────────────────────────────────────────────
 
-  collectPerSystem = { descriptors, evaled, system }:
+  collectPerSystem = { descriptors, evaled, system, agnosticResults ? {} }:
     let
       mods = evaled.modules;
       has  = name: mods ? ${name};
@@ -532,10 +532,15 @@ let
       # Auto-checks from any descriptor that declares autoChecks.
       # Each descriptor's autoChecks receives its impl result and the current
       # system, returning { name = drv; }.
+      # For agnostic descriptors, use pre-computed agnosticResults to avoid
+      # re-forcing host evaluation per system.
       descriptorAutoChecks =
         foldl' (acc: desc:
           if desc ? autoChecks && has desc.name
-          then let result = mods.${desc.name} {};
+          then let result =
+                 if !(desc.perSystem or false) && agnosticResults ? ${desc.name}
+                 then agnosticResults.${desc.name}
+                 else mods.${desc.name} {};
                in acc // desc.autoChecks { inherit result system; }
           else acc
         ) {} (attrValues descriptors);
@@ -558,16 +563,24 @@ let
     in
     coreResult // extraPerSystem;
 
-  collectAgnostic = { descriptors, evaled }:
+  # Returns { <desc-name> = impl-result; ... } for all agnostic descriptors.
+  # Each result is computed once and shared.
+  collectAgnosticByName = { descriptors, evaled }:
     let
       mods = evaled.modules;
       has  = name: mods ? ${name};
-      # All agnostic descriptors: those without perSystem = true
       agnosticDescs = filter (desc: !(desc.perSystem or false)) (attrValues descriptors);
     in
-    foldl' (acc: desc:
-      if has desc.name then acc // (mods.${desc.name} {}) else acc
-    ) {} agnosticDescs;
+    listToAttrs (filter (x: x != null) (map (desc:
+      if has desc.name
+      then { name = desc.name; value = mods.${desc.name} {}; }
+      else null
+    ) agnosticDescs));
+
+  # Merges all agnostic descriptor results into a single attrset (flake outputs).
+  collectAgnostic = args:
+    let byName = collectAgnosticByName args;
+    in foldl' (acc: result: acc // result) {} (attrValues byName);
 
   # ── perSystem helper ───────────────────────────────────────────────
 
@@ -630,15 +643,16 @@ let
 
       firstSystem  = head systems;
       firstEvaled  = loaded { options = mkOpts firstSystem; };
-      firstResult  = collectPerSystem { inherit descriptors; evaled = firstEvaled; system = firstSystem; };
+      agnosticByName    = collectAgnosticByName { inherit descriptors; evaled = firstEvaled; };
+      agnosticFromMods  = foldl' (acc: r: acc // r) {} (attrValues agnosticByName);
+      firstResult  = collectPerSystem { inherit descriptors; evaled = firstEvaled; system = firstSystem; agnosticResults = agnosticByName; };
 
       otherResults = listToAttrs (map (sys:
         let overridden = firstEvaled.override { options = mkOpts sys; };
-        in { name = sys; value = collectPerSystem { inherit descriptors; evaled = overridden; system = sys; }; }
+        in { name = sys; value = collectPerSystem { inherit descriptors; evaled = overridden; system = sys; agnosticResults = agnosticByName; }; }
       ) (tail systems));
 
       transposed        = transpose ({ ${firstSystem} = firstResult; } // otherResults);
-      agnosticFromMods  = collectAgnostic { inherit descriptors; evaled = firstEvaled; };
       templatesOutput   = buildTemplates (discoverTemplates resolvedSrc);
       libOutput         = importLib { libPath = discoverLib resolvedSrc; flake = self; inputs = allInputs; };
     in
@@ -663,8 +677,9 @@ let
       opts    = mkOptions { inherit descriptors discovered configOptions extraScope; }
                   { inherit system pkgs; };
       evaled  = loaded { options = opts; };
-      result  = collectPerSystem { inherit descriptors evaled system; };
-      agnostic = collectAgnostic { inherit descriptors evaled; };
+      agnosticByName = collectAgnosticByName { inherit descriptors evaled; };
+      agnostic = foldl' (acc: r: acc // r) {} (attrValues agnosticByName);
+      result  = collectPerSystem { inherit descriptors evaled system; agnosticResults = agnosticByName; };
 
       templatesOutput = buildTemplates (discoverTemplates src);
       libOutput       = importLib { libPath = discoverLib src; };
