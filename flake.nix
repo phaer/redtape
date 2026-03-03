@@ -9,6 +9,7 @@
   outputs =
     { adios-flake, nixpkgs, ... }:
     let
+      redTape = import ./lib { inherit adios-flake; };
       systems = [
         "x86_64-linux"
         "aarch64-linux"
@@ -26,17 +27,16 @@
         ) { } systems;
     in
     {
-      checks = eachSystem (pkgs: {
-        unit-tests =
-          pkgs.runCommand "red-tape-tests"
-            {
-              nativeBuildInputs = [ pkgs.nix-unit ];
-            }
-            ''
-              nix-unit ${./tests/default.nix}
-              touch $out
-            '';
-      });
+      inherit (redTape) modules;
+
+      mkFlake =
+        args:
+        redTape.mkFlake (
+          args
+          // {
+            systems = args.systems or systems;
+          }
+        );
 
       devShells = eachSystem (pkgs: {
         default = pkgs.mkShell {

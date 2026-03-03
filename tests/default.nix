@@ -1,5 +1,7 @@
-# All tests — import each test file and merge into one attrset
+# All tests — run with: nix-unit tests/default.nix
 let
+  adios-flake = (builtins.getFlake (toString ../.)).inputs.adios-flake;
+
   prefix =
     pre: tests:
     builtins.listToAttrs (
