@@ -26,11 +26,11 @@ let
       inherit inputs self systems perSystem flake;
       modules = [ modules.default ] ++ extraModules;
       config = {
-        "/red-tape/scan" = { inherit src self; inputs = inputs; }
+        "red-tape/scan" = { inherit src self; inputs = inputs; }
           // (if prefix != null then { inherit prefix; } else {});
       }
       // (if moduleTypeAliases != {} then {
-        "/red-tape/modules" = { inherit moduleTypeAliases; };
+        "red-tape/modules" = { inherit moduleTypeAliases; };
       } else {})
       // config;
     };
