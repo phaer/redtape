@@ -6,14 +6,14 @@
 #
 # Usage:
 #   outputs = inputs:
-#     let rt = inputs.red-tape.lib;
-#     in rt {
+#     let rt = inputs.red-tape;
+#     in rt.mkFlake {
 #       inherit inputs;
 #       modules = [
-#         (import (inputs.red-tape.outPath + "/contrib/system-manager.nix") {
+#         (import (rt.outPath + "/contrib/system-manager.nix") {
 #           inherit inputs;
 #           src = inputs.self;
-#           scanHosts = rt._internal.discover.scanHosts;
+#           scanHosts = rt.lib._internal.discover.scanHosts;
 #         })
 #       ];
 #     };

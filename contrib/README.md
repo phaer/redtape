@@ -30,14 +30,14 @@ The core hosts builder finds `configuration.nix` and
   };
 
   outputs = inputs:
-    let rt = inputs.red-tape.lib;
-    in rt {
+    let rt = inputs.red-tape;
+    in rt.mkFlake {
       inherit inputs;
       modules = [
-        (import (inputs.red-tape + "/contrib/system-manager.nix") {
+        (import (rt + "/contrib/system-manager.nix") {
           inherit inputs;
           src = inputs.self;
-          scanHosts = rt._internal.discover.scanHosts;
+          scanHosts = rt.lib._internal.discover.scanHosts;
         })
       ];
     };
@@ -49,8 +49,8 @@ Then put your system-manager configs in `hosts/<name>/system-configuration.nix`.
 ## Writing your own
 
 A contrib module is just a standard adios-flake module — either an ergonomic
-function or a native adios module. Use `red-tape._internal.discover.scanHosts`
-for host-type scanning or `red-tape._internal.discover.scanDir` for generic
+function or a native adios module. Use `red-tape.lib._internal.discover.scanHosts`
+for host-type scanning or `red-tape.lib._internal.discover.scanDir` for generic
 directory scanning.
 
 ```nix

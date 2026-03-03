@@ -23,7 +23,7 @@ via adios-flake modules. ~380 lines of library code.
   inputs.red-tape.url = "github:phaer/red-tape";
   inputs.red-tape.inputs.nixpkgs.follows = "nixpkgs";
 
-  outputs = inputs: inputs.red-tape.lib { inherit inputs; };
+  outputs = inputs: inputs.red-tape.mkFlake { inherit inputs; };
 }
 ```
 
@@ -255,7 +255,7 @@ The original file path is preserved in NixOS module error messages.
 Register new module directories via `moduleTypeAliases`:
 
 ```nix
-inputs.red-tape.lib {
+inputs.red-tape.mkFlake {
   inherit inputs;
   moduleTypeAliases = { flake = "flakeModules"; };
   # modules/flake/foo.nix → flakeModules.foo
@@ -265,7 +265,7 @@ inputs.red-tape.lib {
 ## Configuration
 
 ```nix
-inputs.red-tape.lib {
+inputs.red-tape.mkFlake {
   inherit inputs;
 
   # Monorepo: scan from a subdirectory
@@ -316,7 +316,7 @@ passed through the `modules` parameter — no custom plugin protocol.
 
 ### Primitives
 
-The `_internal` API exposes the building blocks:
+The `lib._internal` API exposes the building blocks:
 
 | Primitive | Description |
 |-----------|-------------|
@@ -341,13 +341,13 @@ The `_internal` API exposes the building blocks:
   };
 
   outputs = inputs:
-    let rt = inputs.red-tape.lib;
-    in rt {
+    let rt = inputs.red-tape;
+    in rt.mkFlake {
       inherit inputs;
       modules = [
         ({ self, ... }:
           let
-            discovered = rt._internal.discover.scanHosts (inputs.self + "/hosts") [
+            discovered = rt.lib._internal.discover.scanHosts (inputs.self + "/hosts") [
               { type = "nix-on-droid"; file = "droid-configuration.nix"; }
             ];
           in {

@@ -7,7 +7,7 @@
     red-tape.inputs = {};
   };
 
-  outputs = inputs: inputs.red-tape.lib {
+  outputs = inputs: inputs.red-tape.mkFlake {
     inherit inputs;
     src = ./.;
     systems = [ "x86_64-linux" ];

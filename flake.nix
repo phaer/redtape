@@ -15,12 +15,12 @@
       }) {} systems;
     in
     {
-      lib = imported // {
-        __functor = _: args:
-          imported.mkFlake (args // {
-            systems = args.systems or systems;
-          });
-      };
+      lib = imported;
+
+      mkFlake = args:
+        imported.mkFlake (args // {
+          systems = args.systems or systems;
+        });
 
       devShells = eachSystem (pkgs: {
         default = pkgs.mkShell {

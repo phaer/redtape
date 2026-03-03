@@ -5,7 +5,7 @@
 #   red-tape.lib.flakeOutputs { src = self; ... }  — system-agnostic flake outputs
 #
 # Convenience:
-#   red-tape.lib { inherit inputs; }              — full flake via mkFlake wrapper
+#   red-tape.mkFlake { inherit inputs; }           — full flake via mkFlake wrapper
 { adios-flake }:
 let
   inherit (builtins)
