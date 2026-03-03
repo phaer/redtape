@@ -121,7 +121,7 @@ let
   mkFlake =
     { inputs
     , self ? inputs.self or null
-    , src ? (if self != null then self else throw "red-tape: either self or src required")
+    , src ? self
     , prefix ? null
     , systems ? [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" "x86_64-darwin" ]
     , nixpkgs ? {}
@@ -133,7 +133,6 @@ let
     }:
     let
       flakeInputs = builtins.removeAttrs inputs [ "self" ];
-      allInputs = flakeInputs // (if self != null then { inherit self; } else {});
 
       # Per-system: red-tape module + optional user perSystem
       redTapeModule = module { inherit src nixpkgs prefix inputs self; };
