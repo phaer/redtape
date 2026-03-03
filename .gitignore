@@ -2,5 +2,3 @@ result
 result-*
 .direnv/
 tests/consumer/flake.lock
-tests/bench-blueprint/flake.lock
-tests/bench-red-tape/flake.lock
