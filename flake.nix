@@ -26,6 +26,18 @@
         ) { } systems;
     in
     {
+      checks = eachSystem (pkgs: {
+        unit-tests =
+          pkgs.runCommand "red-tape-tests"
+            {
+              nativeBuildInputs = [ pkgs.nix-unit ];
+            }
+            ''
+              nix-unit ${./tests/default.nix}
+              touch $out
+            '';
+      });
+
       devShells = eachSystem (pkgs: {
         default = pkgs.mkShell {
           packages = [

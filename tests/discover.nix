@@ -26,12 +26,6 @@ in
   testFullChecks.expr = names (d "full").checks;
   testFullChecks.expected = [ "mycheck" ];
 
-  testFullOverlays.expr = sort (names (d "full").overlays);
-  testFullOverlays.expected = [
-    "default"
-    "my-overlay"
-  ];
-
   testFullFormatter.expr = (d "full").formatter != null;
   testFullFormatter.expected = true;
 
@@ -92,9 +86,6 @@ in
   testMinimalNoFormatter.expr = (d "minimal").formatter;
   testMinimalNoFormatter.expected = null;
 
-  testMinimalNoOverlays.expr = (d "minimal").overlays;
-  testMinimalNoOverlays.expected = { };
-
   # --- Empty fixture ---
 
   testEmpty = {
@@ -108,7 +99,6 @@ in
           devshells
           checks
           hosts
-          overlays
           modules
           formatter
           templates
@@ -119,7 +109,6 @@ in
       devshells = { };
       checks = { };
       hosts = { };
-      overlays = { };
       modules = { };
       formatter = null;
       templates = { };

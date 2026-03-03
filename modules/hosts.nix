@@ -11,7 +11,7 @@ let
     mapAttrs
     ;
 
-  defaultHostBuilders = {
+  defaultHostTypes = {
     custom = {
       outputKey = "nixosConfigurations";
       build =
@@ -49,20 +49,20 @@ let
       discovered,
       inputs,
       self,
-      extraHostBuilders ? { },
+      extraHostTypes ? { },
     }:
     let
       specialArgs = {
         flake = self;
         inherit inputs;
       };
-      hostBuilders = defaultHostBuilders // extraHostBuilders;
+      hostTypes = defaultHostTypes // extraHostTypes;
 
       loadHost =
         name: info:
         addErrorContext "while building host '${name}' (${info.type})" (
           let
-            builder = hostBuilders.${info.type} or null;
+            builder = hostTypes.${info.type} or null;
           in
           if builder == null then
             throw "red-tape: unknown host type '${info.type}' for '${name}'"
@@ -133,7 +133,7 @@ in
     };
   };
   options = {
-    extraHostBuilders = {
+    extraHostTypes = {
       type = {
         name = "attrs";
         verify = v: if isAttrs v then null else "expected attrset";
@@ -150,7 +150,7 @@ in
       buildHosts {
         discovered = discovered.hosts;
         inherit inputs self;
-        extraHostBuilders = options.extraHostBuilders;
+        extraHostTypes = options.extraHostTypes;
       }
     else
       {

@@ -12,10 +12,8 @@ let
     mapAttrs
     ;
 
-  defaultTypeAliases = {
+  defaultModuleTypes = {
     nixos = "nixosModules";
-    darwin = "darwinModules";
-    home = "homeModules";
   };
 
   buildModules =
@@ -23,14 +21,14 @@ let
       discovered,
       inputs,
       self,
-      extraTypeAliases ? { },
+      extraModuleTypes ? { },
     }:
     let
       publisherArgs = {
         flake = self;
         inherit inputs;
       };
-      typeAliases = defaultTypeAliases // extraTypeAliases;
+      moduleTypes = defaultModuleTypes // extraModuleTypes;
 
       isPublisherFn =
         fn:
@@ -63,7 +61,7 @@ let
     foldl' (
       acc: t:
       let
-        alias = typeAliases.${t} or null;
+        alias = moduleTypes.${t} or null;
       in
       if alias != null then acc // { ${alias} = built.${t}; } else acc
     ) { } (attrNames discovered);
@@ -76,7 +74,7 @@ in
     };
   };
   options = {
-    moduleTypeAliases = {
+    moduleTypes = {
       type = {
         name = "attrs";
         verify = v: if builtins.isAttrs v then null else "expected attrset";
@@ -93,7 +91,7 @@ in
       buildModules {
         discovered = discovered.modules;
         inherit inputs self;
-        extraTypeAliases = options.moduleTypeAliases;
+        extraModuleTypes = options.moduleTypes;
       }
     else
       { };

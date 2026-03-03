@@ -2,7 +2,7 @@
 let
   discover = import ../lib/discover.nix;
 
-  lib = import <nixpkgs/lib>;
+  lib = { };
 
   mockPkgs = {
     system = "x86_64-linux";
@@ -44,6 +44,187 @@ let
   fixtures = ../tests/fixtures;
 
   helpers = import ../lib/utils.nix;
+
+  # Domain builders — extracted for direct testing without adios runtime
+  inherit (builtins)
+    addErrorContext
+    all
+    attrNames
+    elem
+    filter
+    foldl'
+    functionArgs
+    intersectAttrs
+    isAttrs
+    isFunction
+    listToAttrs
+    map
+    mapAttrs
+    ;
+  inherit (helpers) entryPath;
+
+  defaultHostTypes = {
+    custom = {
+      outputKey = "nixosConfigurations";
+      build =
+        {
+          name,
+          info,
+          specialArgs,
+          inputs,
+        }:
+        import info.configPath {
+          inherit (specialArgs) flake inputs;
+          hostName = name;
+        };
+    };
+    nixos = {
+      outputKey = "nixosConfigurations";
+      build =
+        {
+          name,
+          info,
+          specialArgs,
+          inputs,
+        }:
+        inputs.nixpkgs.lib.nixosSystem {
+          modules = [ info.configPath ];
+          specialArgs = specialArgs // {
+            hostName = name;
+          };
+        };
+    };
+  };
+
+  buildHosts =
+    {
+      discovered,
+      inputs ? { },
+      self ? null,
+      extraHostTypes ? { },
+    }:
+    let
+      specialArgs = {
+        flake = self;
+        inherit inputs;
+      };
+      hostTypes = defaultHostTypes // extraHostTypes;
+      loadHost =
+        name: info:
+        addErrorContext "while building host '${name}' (${info.type})" (
+          let
+            builder = hostTypes.${info.type} or null;
+          in
+          if builder == null then
+            throw "red-tape: unknown host type '${info.type}' for '${name}'"
+          else
+            {
+              outputKey = builder.outputKey;
+              value = builder.build {
+                inherit
+                  name
+                  info
+                  specialArgs
+                  inputs
+                  ;
+              };
+            }
+        );
+      loaded = mapAttrs loadHost discovered;
+      byOutputKey = foldl' (
+        acc: n:
+        let
+          h = loaded.${n};
+          key = h.outputKey;
+        in
+        acc
+        // {
+          ${key} = (acc.${key} or { }) // {
+            ${n} = h.value;
+          };
+        }
+      ) { } (attrNames loaded);
+      autoChecks =
+        system:
+        foldl' (
+          acc: key:
+          let
+            hosts = byOutputKey.${key} or { };
+          in
+          acc
+          // listToAttrs (
+            filter (x: x != null) (
+              map (
+                n:
+                let
+                  s = hosts.${n}.config.nixpkgs.hostPlatform.system or null;
+                in
+                if s == system then
+                  {
+                    name = "${key}-${n}";
+                    value = hosts.${n}.config.system.build.toplevel;
+                  }
+                else
+                  null
+              ) (attrNames hosts)
+            )
+          )
+        ) { } (attrNames byOutputKey);
+    in
+    byOutputKey // { inherit autoChecks; };
+
+  defaultModuleTypes = {
+    nixos = "nixosModules";
+  };
+
+  buildModules =
+    {
+      discovered,
+      inputs ? { },
+      self ? null,
+      extraModuleTypes ? { },
+    }:
+    let
+      publisherArgs = {
+        flake = self;
+        inherit inputs;
+      };
+      moduleTypes = defaultModuleTypes // extraModuleTypes;
+      isPublisherFn =
+        fn:
+        isFunction fn
+        && (functionArgs fn) != { }
+        && all (
+          a:
+          elem a [
+            "flake"
+            "inputs"
+          ]
+        ) (attrNames (functionArgs fn));
+      importModule =
+        e:
+        let
+          path = entryPath e;
+          mod = import path;
+        in
+        if isPublisherFn mod then
+          {
+            _file = toString path;
+            imports = [ (mod (intersectAttrs (functionArgs mod) publisherArgs)) ];
+          }
+        else
+          path;
+      built = mapAttrs (_: mapAttrs (_: importModule)) discovered;
+    in
+    foldl' (
+      acc: t:
+      let
+        alias = moduleTypes.${t} or null;
+      in
+      if alias != null then acc // { ${alias} = built.${t}; } else acc
+    ) { } (attrNames discovered);
+
+  builders = { inherit buildHosts buildModules; };
 in
 {
   inherit
@@ -52,5 +233,6 @@ in
     fixtures
     discover
     helpers
+    builders
     ;
 }

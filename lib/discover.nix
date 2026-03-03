@@ -7,7 +7,6 @@
 #   ├── devshell.nix | devshells/{name}.nix
 #   ├── formatter.nix
 #   ├── checks/{name}.nix
-#   ├── overlays/{name}.nix | overlay.nix
 #   ├── hosts/{name}/configuration.nix  (nixos)
 #   │               /default.nix  (custom)
 #   ├── modules/{type}/{name}.nix
@@ -174,10 +173,6 @@ let
       // optional (src + "/devshells")
       // optionalSingle (src + "/devshell.nix") "default";
     checks = optionalDefault (src + "/checks") // optional (src + "/checks");
-    overlays =
-      optionalDefault (src + "/overlays")
-      // optional (src + "/overlays")
-      // optionalSingle (src + "/overlay.nix") "default";
     hosts = scanHosts (src + "/hosts") coreHostTypes;
     formatter = if pathExists (src + "/formatter.nix") then src + "/formatter.nix" else null;
     templates =
