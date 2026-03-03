@@ -18,6 +18,9 @@ in
       formatter = {
         path = "./formatter";
       };
+      checks = {
+        path = "./checks";
+      };
     };
     impl =
       { results, ... }:
@@ -30,6 +33,7 @@ in
       packages = strip (import ./packages.nix);
       devshells = strip (import ./devshells.nix);
       formatter = strip (import ./formatter.nix);
+      checks = strip (import ./checks.nix);
     };
   };
 }
