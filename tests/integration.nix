@@ -1,8 +1,8 @@
 # Integration tests — builders with mock pkgs
 let
   prelude = import ./prelude.nix;
-  inherit (prelude) mockPkgs sys fixtures _internal;
-  inherit (_internal) discover callFile buildAll filterPlatforms withPrefix;
+  inherit (prelude) mockPkgs sys fixtures discover helpers;
+  inherit (helpers) callFile buildAll filterPlatforms withPrefix;
 
   evalFixture = src:
     let

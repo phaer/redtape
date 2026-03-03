@@ -1,9 +1,9 @@
 # Tests for extensibility — custom host types and module types via adios-flake modules
 let
   prelude = import ./prelude.nix;
-  inherit (prelude) _internal fixtures;
-  inherit (_internal) discover entryPath;
-  inherit (_internal.builders) buildModules;
+  inherit (prelude) discover helpers builders fixtures;
+  inherit (helpers) entryPath;
+  inherit (builders) buildModules;
   inherit (discover) scanDir scanHosts;
 in
 {

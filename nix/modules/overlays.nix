@@ -1,7 +1,6 @@
 # red-tape/overlays — Discover and build overlay expressions
 #
-# Inputs: ../scan
-# Options: self, inputs
+# Inputs: ../scan (discovery + flake context)
 # Result: { overlays = { name = overlay-fn; }; }
 { buildAll }:
 
@@ -10,27 +9,13 @@
   inputs = {
     scan = { path = "../scan"; };
   };
-  options = {
-    self = {
-      type = { name = "any"; verify = _: null; };
-      default = null;
-    };
-    inputs = {
-      type = { name = "attrs"; verify = v: if builtins.isAttrs v then null else "expected attrset"; };
-      default = {};
-    };
-  };
-  impl = { results, options, ... }:
+  impl = { results, ... }:
     let
-      inherit (builtins) removeAttrs;
-      found = results.scan;
-      self = options.self;
-      allInputs = (removeAttrs options.inputs [ "self" ])
-        // (if self != null then { inherit self; } else {});
+      inherit (results.scan) discovered self allInputs;
       agnostic = { flake = self; inputs = allInputs; };
     in
-    if found.overlays != {} then
-      { overlays = buildAll agnostic found.overlays; }
+    if discovered.overlays != {} then
+      { overlays = buildAll agnostic discovered.overlays; }
     else
       {};
 }

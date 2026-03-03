@@ -1,8 +1,7 @@
 # Template tests
 let
   prelude = import ./prelude.nix;
-  inherit (prelude) _internal fixtures;
-  inherit (_internal) discover;
+  inherit (prelude) discover fixtures;
 
   mkTemplates = found: builtins.mapAttrs (name: entry:
     let f = entry.path + "/flake.nix";

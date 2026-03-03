@@ -10,7 +10,6 @@ let
   evalFixture = {
     src,
     prefix ? null,
-    scopeOpts ? { self = null; inputs = {}; },
     modulesOpts ? {},
   }:
     let
@@ -26,24 +25,22 @@ let
         };
       };
 
-      scanOpts = { inherit src; }
-        // (if prefix != null then { inherit prefix; } else {});
-
       tree = adiosLib rootDef {
         options = {
-          "/red-tape/scan" = scanOpts;
-          "/red-tape/scope" = scopeOpts;
-          "/red-tape/hosts" = scopeOpts;
-          "/red-tape/modules" = scopeOpts // modulesOpts;
-          "/red-tape/overlays" = scopeOpts;
-          "/red-tape/lib" = scopeOpts;
+          "/red-tape/scan" = { inherit src; }
+            // (if prefix != null then { inherit prefix; } else {});
+          "/red-tape/modules" = modulesOpts;
           "/nixpkgs" = { system = sys; pkgs = mockPkgs; };
           "/red-tape" = {};
+          "/red-tape/scope" = {};
           "/red-tape/packages" = {};
           "/red-tape/devshells" = {};
           "/red-tape/checks" = {};
           "/red-tape/formatter" = {};
+          "/red-tape/hosts" = {};
+          "/red-tape/overlays" = {};
           "/red-tape/templates" = {};
+          "/red-tape/lib" = {};
         };
       };
     in

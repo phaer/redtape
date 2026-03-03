@@ -11,5 +11,5 @@
     scope = { path = "../scope"; };
   };
   impl = { results, ... }:
-    { devShells = buildAll results.scope.scope results.scan.devshells; };
+    { devShells = buildAll results.scope.scope results.scan.discovered.devshells; };
 }

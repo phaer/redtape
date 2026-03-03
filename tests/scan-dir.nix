@@ -1,8 +1,8 @@
 # Tests for scanDir
 let
   prelude = import ./prelude.nix;
-  inherit (prelude) _internal fixtures;
-  inherit (_internal.discover) scanDir;
+  inherit (prelude) discover fixtures;
+  inherit (discover) scanDir;
 in
 {
   # Discovers .nix files and directories with default.nix

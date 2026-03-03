@@ -1,9 +1,8 @@
 # Tests for host building
 let
   prelude = import ./prelude.nix;
-  inherit (prelude) _internal fixtures;
-  inherit (_internal) discover;
-  inherit (_internal.builders) buildHosts;
+  inherit (prelude) discover builders fixtures;
+  inherit (builders) buildHosts;
 
   fullHosts = (discover.discoverAll (fixtures + "/full")).hosts;
 

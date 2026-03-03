@@ -1,14 +1,20 @@
-# red-tape/scan — Pure filesystem discovery module
+# red-tape/scan — Pure filesystem discovery + shared flake context
 #
 # Options:
 #   src    — Source path to scan (typically `self`)
 #   prefix — Optional subdirectory prefix
+#   self   — The flake self (path-like, for threading as `flake` into user exprs)
+#   inputs — All flake inputs
 #
-# Result: the full discovery attrset from discover.discoverAll
+# Result: { discovered, src, self, allInputs }
+#   discovered — the full discoverAll attrset
+#   src        — resolved source path
+#   self       — flake self (as-is)
+#   allInputs  — inputs with self merged in
 { discover }:
 
 let
-  inherit (builtins) isPath;
+  inherit (builtins) isPath removeAttrs;
 in
 {
   name = "scan";
@@ -32,15 +38,30 @@ in
       };
       default = null;
     };
+    self = {
+      # Never inspected — avoids forcing the flake fixpoint to WHNF.
+      type = { name = "any"; verify = _: null; };
+      default = null;
+    };
+    inputs = {
+      type = { name = "attrs"; verify = v: if builtins.isAttrs v then null else "expected attrset"; };
+      default = {};
+    };
   };
   impl = { options, ... }:
     let
       src = options.src;
       prefix = options.prefix;
+      self = options.self;
       resolvedSrc =
         if prefix != null then
           (if isPath prefix then prefix else src + "/${prefix}")
         else src;
+      allInputs = (removeAttrs options.inputs [ "self" ])
+        // (if self != null then { inherit self; } else {});
     in
-    discover.discoverAll resolvedSrc;
+    {
+      discovered = discover.discoverAll resolvedSrc;
+      inherit src self allInputs;
+    };
 }

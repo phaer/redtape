@@ -2,3 +2,4 @@ result
 result-*
 .direnv/
 tests/consumer/flake.lock
+.pi/

@@ -1,9 +1,8 @@
 # Tests for module export
 let
   prelude = import ./prelude.nix;
-  inherit (prelude) _internal fixtures;
-  inherit (_internal) discover;
-  inherit (_internal.builders) buildModules;
+  inherit (prelude) discover builders fixtures;
+  inherit (builders) buildModules;
 
   full = buildModules {
     discovered = (discover.discoverAll (fixtures + "/full")).modules;

@@ -1,8 +1,7 @@
 # Tests for prefix support
 let
   prelude = import ./prelude.nix;
-  inherit (prelude) _internal fixtures;
-  inherit (_internal) discover;
+  inherit (prelude) discover fixtures;
 in
 {
   # Discover sees packages when pointed at the prefix subdirectory

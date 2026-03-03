@@ -18,7 +18,7 @@
       inherit (builtins) attrNames concatMap listToAttrs map;
       s = results.scope;
       system = s.system;
-      found = results.scan;
+      found = results.scan.discovered;
       packages = results.packages.packages;
       devShells = results.devshells.devShells;
       hostResult = results.hosts;

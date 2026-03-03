@@ -9,8 +9,8 @@
   };
   impl = { results, ... }:
     let
-      inherit (builtins) attrNames mapAttrs pathExists;
-      found = results.scan;
+      inherit (builtins) mapAttrs pathExists;
+      found = results.scan.discovered;
       templates = mapAttrs (name: e: {
         inherit (e) path;
         description =

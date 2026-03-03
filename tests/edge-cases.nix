@@ -1,8 +1,8 @@
 # Edge case tests
 let
   prelude = import ./prelude.nix;
-  inherit (prelude) _internal fixtures;
-  inherit (_internal) discover filterPlatforms;
+  inherit (prelude) discover helpers fixtures;
+  inherit (helpers) filterPlatforms;
 in
 {
   testFilterPlatformsKeepsMatching = {

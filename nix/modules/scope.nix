@@ -1,8 +1,7 @@
 # red-tape/scope — Build shared evaluation scope for per-system modules
 #
-# Inputs: /nixpkgs (system, pkgs)
-# Options: self, inputs
-# Result: { system, pkgs, lib, scope, allInputs, self }
+# Inputs: /nixpkgs (system, pkgs), ../scan (discovery + flake context)
+# Result: { system, pkgs, self, allInputs, scope }
 #
 # Downstream per-system modules (packages, devshells, checks, formatter)
 # depend on ../scope to get the evaluation scope without duplicating it.
@@ -10,25 +9,14 @@
   name = "scope";
   inputs = {
     nixpkgs = { path = "/nixpkgs"; };
+    scan    = { path = "../scan"; };
   };
-  options = {
-    self = {
-      type = { name = "any"; verify = _: null; };
-      default = null;
-    };
-    inputs = {
-      type = { name = "attrs"; verify = v: if builtins.isAttrs v then null else "expected attrset"; };
-      default = {};
-    };
-  };
-  impl = { inputs, options, ... }:
+  impl = { inputs, results, ... }:
     let
-      inherit (builtins) isAttrs mapAttrs removeAttrs;
+      inherit (builtins) isAttrs mapAttrs;
       system = inputs.nixpkgs.system;
       pkgs = inputs.nixpkgs.pkgs;
-      self = options.self;
-      allInputs = (removeAttrs options.inputs [ "self" ])
-        // (if self != null then { inherit self; } else {});
+      inherit (results.scan) self allInputs;
     in
     {
       inherit system pkgs self allInputs;

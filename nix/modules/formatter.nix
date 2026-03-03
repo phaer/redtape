@@ -13,7 +13,7 @@
   impl = { results, ... }:
     let
       s = results.scope;
-      found = results.scan;
+      found = results.scan.discovered;
       pkgs = s.pkgs;
       formatter =
         if found.formatter != null then callFile s.scope found.formatter {}

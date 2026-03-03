@@ -1,8 +1,7 @@
 # Tests for lib export
 let
   prelude = import ./prelude.nix;
-  inherit (prelude) _internal fixtures;
-  inherit (_internal) discover;
+  inherit (prelude) discover fixtures;
 
   importLib = libPath: args:
     if libPath == null then {}

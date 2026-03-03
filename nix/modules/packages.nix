@@ -13,7 +13,7 @@
   impl = { results, ... }:
     let
       s = results.scope;
-      found = results.scan;
+      found = results.scan.discovered;
     in
     { packages = filterPlatforms s.system (buildAll s.scope found.packages); };
 }

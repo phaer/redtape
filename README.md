@@ -10,7 +10,7 @@ A clone of [blueprint](https://github.com/numtide/blueprint) rebuilt on
 [adios-flake](https://github.com/Mic92/adios-flake). Same directory
 conventions, same idea — drop `.nix` files in the right place, get flake
 outputs — but with adios memoization, overlay support, and extensibility
-via adios-flake modules. ~700 lines of library code across 14 files.
+via adios-flake modules. ~600 lines of library code across 16 files.
 
 ## Quick Start
 
@@ -306,8 +306,8 @@ inputs.red-tape.mkFlake {
     );
   };
 
-  # adios-flake modules for extension (see below)
-  modules = [ ];
+  # Extra adios-flake modules
+  extraModules = [ ];
 
   # adios-flake config
   config = {};
@@ -318,22 +318,17 @@ inputs.red-tape.mkFlake {
 
 red-tape is built on [adios-flake](https://github.com/Mic92/adios-flake).
 New host types and output types are added via standard adios-flake modules
-passed through the `modules` parameter — no custom plugin protocol.
+passed through `extraModules` — no custom plugin protocol.
 
-### Primitives
+The scanning primitives live in `nix/discover.nix` and `nix/helpers.nix`,
+importable directly from the flake source:
 
-The `lib._internal` API exposes the building blocks:
-
-| Primitive | Description |
-|-----------|-------------|
-| `discover.scanDir` | Scan a directory for `.nix` files and `*/default.nix` subdirs |
-| `discover.scanHosts` | Scan host dirs for sentinel files (`[{ type; file; }]`) |
-| `discover.discoverAll` | Full-tree scan using all conventions |
-| `callFile` | Import + auto-inject from scope |
-| `buildAll` | `callFile` over every discovered entry |
-| `entryPath` | Resolve entry to `.nix` path |
-| `withPrefix` | Prefix all keys in an attrset |
-| `filterPlatforms` | Keep derivations matching `meta.platforms` |
+```nix
+# Example: nix-on-droid support
+(import (inputs.red-tape + "/contrib/system-manager.nix") {
+  inherit inputs; src = inputs.self;
+})
+```
 
 ### Example: nix-on-droid support
 
@@ -347,40 +342,40 @@ The `lib._internal` API exposes the building blocks:
   };
 
   outputs = inputs:
-    let rt = inputs.red-tape;
-    in rt.mkFlake {
+    inputs.red-tape.mkFlake {
       inherit inputs;
-      modules = [
-        ({ self, ... }:
-          let
-            discovered = rt.lib._internal.discover.scanHosts (inputs.self + "/hosts") [
-              { type = "nix-on-droid"; file = "droid-configuration.nix"; }
-            ];
-          in {
-            nixOnDroidConfigurations = builtins.mapAttrs (hostName: info:
-              inputs.nix-on-droid.lib.nixOnDroidConfiguration {
-                pkgs = import inputs.nixpkgs { system = "aarch64-linux"; };
-                modules = [ info.configPath ];
-                extraSpecialArgs = { flake = self; inherit hostName; };
-              }
-            ) discovered;
-          }
-        )
+      extraModules = [
+        (let
+          discover = import (inputs.red-tape + "/nix/discover.nix");
+          discovered = discover.scanHosts (inputs.self + "/hosts") [
+            { type = "nix-on-droid"; file = "droid-configuration.nix"; }
+          ];
+        in { self, ... }: {
+          nixOnDroidConfigurations = builtins.mapAttrs (hostName: info:
+            inputs.nix-on-droid.lib.nixOnDroidConfiguration {
+              pkgs = import inputs.nixpkgs { system = "aarch64-linux"; };
+              modules = [ info.configPath ];
+              extraSpecialArgs = { flake = self; inherit hostName; };
+            }
+          ) discovered;
+        })
       ];
     };
 }
 ```
 
 A pre-built module for [system-manager](https://github.com/numtide/system-manager)
-is available in [`contrib/system-manager.nix`](contrib/).
+is available in [`contrib/`](contrib/).
 
 ## Architecture
 
 ```
 flake.nix                      — entry point, exposes mkFlake + modules
 nix/
-  default.nix                  — primitives, builders, mkFlake sugar
+  default.nix                  — mkFlake sugar, wires everything together
   discover.nix                 — pure filesystem scanning
+  helpers.nix                  — 5 primitives (callFile, buildAll, etc.)
+  builders.nix                 — domain builders (hosts, module exports)
   modules/
     default.nix                — top-level module tree + individual exports
     scan.nix                   — /red-tape/scan: discoverAll from src

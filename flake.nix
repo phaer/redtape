@@ -8,27 +8,23 @@
 
   outputs = { adios-flake, nixpkgs, ... }:
     let
-      imported = import ./nix { inherit adios-flake; };
+      redTape = import ./nix { inherit adios-flake; };
       systems = [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" "x86_64-darwin" ];
       eachSystem = f: builtins.foldl' (acc: system: acc // {
         ${system} = f (import nixpkgs { inherit system; });
       }) {} systems;
     in
     {
-      lib = imported;
-      modules = imported.modules;
+      inherit (redTape) modules;
 
       mkFlake = args:
-        imported.mkFlake (args // {
+        redTape.mkFlake (args // {
           systems = args.systems or systems;
         });
 
       devShells = eachSystem (pkgs: {
         default = pkgs.mkShell {
-          packages = [
-            pkgs.nix-unit
-            pkgs.nixfmt-tree
-          ];
+          packages = [ pkgs.nix-unit pkgs.nixfmt-tree ];
         };
       });
     };

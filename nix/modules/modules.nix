@@ -1,7 +1,7 @@
 # red-tape/modules — Discover and export NixOS/Darwin/Home modules
 #
-# Inputs: ../scan
-# Options: self, inputs, moduleTypeAliases
+# Inputs: ../scan (discovery + flake context)
+# Options: moduleTypeAliases
 # Result: { nixosModules, darwinModules, homeModules, ... }
 { buildModules }:
 
@@ -11,14 +11,6 @@
     scan = { path = "../scan"; };
   };
   options = {
-    self = {
-      type = { name = "any"; verify = _: null; };
-      default = null;
-    };
-    inputs = {
-      type = { name = "attrs"; verify = v: if builtins.isAttrs v then null else "expected attrset"; };
-      default = {};
-    };
     moduleTypeAliases = {
       type = { name = "attrs"; verify = v: if builtins.isAttrs v then null else "expected attrset"; };
       default = {};
@@ -26,15 +18,11 @@
   };
   impl = { results, options, ... }:
     let
-      inherit (builtins) removeAttrs;
-      found = results.scan;
-      self = options.self;
-      allInputs = (removeAttrs options.inputs [ "self" ])
-        // (if self != null then { inherit self; } else {});
+      inherit (results.scan) discovered self allInputs;
     in
-    if found.modules != {} then
+    if discovered.modules != {} then
       buildModules {
-        discovered = found.modules;
+        discovered = discovered.modules;
         inherit allInputs self;
         extraTypeAliases = options.moduleTypeAliases;
       }
