@@ -10,7 +10,7 @@ A clone of [blueprint](https://github.com/numtide/blueprint) rebuilt on
 [adios-flake](https://github.com/Mic92/adios-flake). Same directory
 conventions, same idea — drop `.nix` files in the right place, get flake
 outputs — but with adios memoization, overlay support, and extensibility
-via adios-flake modules. ~380 lines of library code.
+via adios-flake modules. ~700 lines of library code across 14 files.
 
 ## Quick Start
 
@@ -72,16 +72,6 @@ concern — `scan` discovers files, `packages` builds them, `hosts` wires
 NixOS configurations, etc. adios memoizes each independently, so
 flake-scoped outputs (hosts, modules, overlays) are evaluated once even
 across multiple systems.
-
-You can also pick individual sub-modules for maximum control:
-
-```nix
-modules = [
-  red-tape.modules.packages
-  red-tape.modules.devshells
-  red-tape.modules.formatter
-];
-```
 
 Host auto-checks (building `system.build.toplevel` for each
 `nixosConfigurations`/`darwinConfigurations` entry) are automatically
@@ -387,23 +377,46 @@ is available in [`contrib/system-manager.nix`](contrib/).
 ## Architecture
 
 ```
-flake.nix               — entry point, __functor wrapper
+flake.nix                      — entry point, exposes mkFlake + modules
 nix/
-  default.nix            — primitives, builders, mkFlake shim
-  module.nix             — adios-flake module (per-system discovery)
-  flake-outputs.nix      — system-agnostic flake outputs
-  discover.nix           — pure filesystem scanning
+  default.nix                  — primitives, builders, mkFlake sugar
+  discover.nix                 — pure filesystem scanning
+  modules/
+    default.nix                — top-level module tree + individual exports
+    scan.nix                   — /red-tape/scan: discoverAll from src
+    scope.nix                  — /red-tape/scope: shared per-system eval scope
+    packages.nix               — /red-tape/packages: build packages
+    devshells.nix              — /red-tape/devshells: build devshells
+    checks.nix                 — /red-tape/checks: user + auto-checks
+    formatter.nix              — /red-tape/formatter: discover or default
+    hosts.nix                  — /red-tape/hosts: NixOS/Darwin configs
+    modules.nix                — /red-tape/modules: NixOS/Darwin/Home exports
+    overlays.nix               — /red-tape/overlays: overlay expressions
+    templates.nix              — /red-tape/templates: template directories
+    lib.nix                    — /red-tape/lib: project lib/
 ```
 
-The core is split into composable pieces:
+red-tape is a tree of **native adios modules**. Each sub-module handles
+one concern and declares its dependencies explicitly:
 
-- **`module.nix`** — an adios-flake module that discovers `packages/`,
-  `devshells/`, `checks/`, `formatter.nix` and produces per-system outputs
-- **`flake-outputs.nix`** — discovers `hosts/`, `modules/`, `overlays/`,
-  `templates/`, `lib/` and returns a plain attrset
-- **`default.nix`** — shared primitives (`callFile`, `buildAll`, etc.),
-  domain builders (modules, hosts), and `mkFlake` as a thin wrapper that
-  composes the module + flake outputs into an `adiosFlakeLib.mkFlake` call
+| Module | Depends on | Memoized across systems? |
+|--------|-----------|------------------------|
+| `scan` | — | ✓ (no `/nixpkgs` dep) |
+| `scope` | `/nixpkgs` | ✗ (changes per system) |
+| `packages` | `scan`, `scope` | ✗ |
+| `devshells` | `scan`, `scope` | ✗ |
+| `checks` | `scan`, `scope`, `packages`, `devshells`, `hosts` | ✗ |
+| `formatter` | `scan`, `scope` | ✗ |
+| `hosts` | `scan` | ✓ (flake-scoped) |
+| `modules` | `scan` | ✓ (flake-scoped) |
+| `overlays` | `scan` | ✓ (flake-scoped) |
+| `templates` | `scan` | ✓ (flake-scoped) |
+| `lib` | `scan` | ✓ (flake-scoped) |
+
+When adios evaluates for a second system via `override`, only 5 modules
+are re-evaluated (scope, packages, devshells, checks, formatter). The
+other 6 (scan, hosts, modules, overlays, templates, lib) are served from
+`memoResults`.
 
 **Five primitives** — `callFile`, `entryPath`, `buildAll`, `withPrefix`,
 `filterPlatforms` — compose to handle all per-system output types.
@@ -416,7 +429,7 @@ evaluation. The result is an attrset of `{}` (nothing found) or
 consumes directly.
 
 **adios-flake** handles per-system transposition, memoization, module
-composition, `self'`/`inputs'`/`withSystem`. red-tape is just the convention
+composition, `self'`/`inputs'`/`withSystem`. red-tape is the convention
 layer on top.
 
 ## Comparison with blueprint
