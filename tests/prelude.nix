@@ -1,13 +1,13 @@
 # Test prelude — shared setup for all test files
 let
-  flake = builtins.getFlake "git+file://${toString ./..}";
-  redTape = flake.lib;
+  adios-flake = builtins.getFlake "github:Mic92/adios-flake";
+  redTape = import ../nix { inherit adios-flake; };
 
-  realPkgs = import <nixpkgs> { system = "x86_64-linux"; };
+  lib = import <nixpkgs/lib>;
 
   mockPkgs = {
     system = "x86_64-linux";
-    lib = realPkgs.lib;
+    inherit lib;
     mkShell = args: { type = "devshell"; } // args;
     hello = { type = "derivation"; name = "hello"; meta = {}; };
     writeShellScriptBin = name: text: {
@@ -24,6 +24,6 @@ let
   fixtures = ../tests/fixtures;
 in
 {
-  inherit redTape realPkgs mockPkgs sys fixtures;
+  inherit mockPkgs sys fixtures;
   _internal = redTape._internal;
 }
