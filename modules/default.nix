@@ -30,6 +30,9 @@ in
       templates = {
         path = "./templates";
       };
+      lib = {
+        path = "./lib";
+      };
     };
     impl =
       { results, ... }:
@@ -46,6 +49,7 @@ in
       hosts = strip (import ./hosts.nix);
       modules = strip (import ./modules.nix);
       templates = strip (import ./templates.nix);
+      lib = strip (import ./lib.nix);
     };
   };
 }
