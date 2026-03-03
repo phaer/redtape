@@ -9,7 +9,9 @@ in
   default = {
     name = "red-tape";
     inputs = {
-      # Sub-modules added incrementally as they're implemented.
+      packages = {
+        path = "./packages";
+      };
     };
     impl =
       { results, ... }:
@@ -19,6 +21,7 @@ in
     modules = {
       scan = strip (import ./scan.nix { discover = import ../lib/discover.nix; });
       scope = strip (import ./scope.nix);
+      packages = strip (import ./packages.nix);
     };
   };
 }
