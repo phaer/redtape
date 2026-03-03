@@ -57,4 +57,45 @@ in
       myhostType = "nixos";
     };
   };
+  testScanModuleSubdirs = {
+    expr =
+      let
+        modulesPath = fixtures + "/full/modules";
+        entries = builtins.readDir modulesPath;
+        types = builtins.filter (n: entries.${n} == "directory") (builtins.attrNames entries);
+      in
+      builtins.sort builtins.lessThan types;
+    expected = [
+      "darwin"
+      "home"
+      "nixos"
+    ];
+  };
+  testUnknownModuleTypeSkipped = {
+    expr = buildModules {
+      discovered = {
+        flake = scanDir (fixtures + "/full/modules/nixos");
+      };
+    };
+    expected = { };
+  };
+  testExtraModuleTypes = {
+    expr =
+      let
+        result = buildModules {
+          discovered = (discover.discoverAll (fixtures + "/custom-modules")).modules;
+          extraModuleTypes = {
+            flake = "flakeModules";
+          };
+        };
+      in
+      {
+        keys = builtins.attrNames result;
+        modNames = builtins.attrNames (result.flakeModules or { });
+      };
+    expected = {
+      keys = [ "flakeModules" ];
+      modNames = [ "mymod" ];
+    };
+  };
 }
