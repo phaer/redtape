@@ -6,10 +6,8 @@
 { adios-flake }:
 let
   adiosFlakeLib = adios-flake.lib or adios-flake;
-  helpers = import ./helpers.nix;
-  builders = import ./builders.nix;
 
-  modules = import ./modules (helpers // builders);
+  modules = import ./modules;
 
   mkFlake =
     { inputs
