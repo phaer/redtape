@@ -2,7 +2,7 @@
   description = "red-tape — convention-based project builder on adios-flake";
 
   inputs = {
-    adios-flake.url = "github:phaer/adios-flake/flake-outputs";
+    adios-flake.url = "github:phaer/adios-flake/config-absolute-paths";
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
   };
 
