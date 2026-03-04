@@ -1,1 +1,1 @@
-{ pkgs, ... }: pkgs.mkShell { packages = [ pkgs.custom-tool ]; }
+{ pkgs, ... }: pkgs.mkShell { packages = [ pkgs.jq ]; }

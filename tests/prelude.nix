@@ -13,9 +13,9 @@ let
       name = "hello";
       meta = { };
     };
-    custom-tool = {
+    jq = {
       type = "derivation";
-      name = "custom-tool";
+      name = "jq";
       meta = { };
     };
     writeShellScriptBin = name: text: {
