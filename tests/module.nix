@@ -65,6 +65,7 @@ in
   testModulePackageNames = {
     expr = builtins.sort builtins.lessThan (builtins.attrNames fullResult.packages);
     expected = [
+      "formatter"
       "goodbye"
       "hello"
     ];
@@ -88,6 +89,7 @@ in
     expr = builtins.sort builtins.lessThan (builtins.attrNames prefixResult.packages);
     expected = [
       "default"
+      "formatter"
       "widget"
     ];
   };

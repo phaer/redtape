@@ -11,6 +11,9 @@ in
     scope = {
       path = "../scope";
     };
+    formatter = {
+      path = "../formatter";
+    };
   };
   impl =
     { results, ... }:
@@ -19,6 +22,8 @@ in
       found = results.scan.discovered;
     in
     {
-      packages = filterPlatforms s.system (buildAll s.scope found.packages);
+      packages = filterPlatforms s.system (
+        buildAll s.scope found.packages // { formatter = results.formatter.formatter; }
+      );
     };
 }

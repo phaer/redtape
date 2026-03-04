@@ -23,6 +23,9 @@ in
     devshells = {
       path = "../devshells";
     };
+    formatter = {
+      path = "../formatter";
+    };
     hosts = {
       path = "../hosts";
     };
@@ -35,6 +38,7 @@ in
       found = results.scan.discovered;
       packages = results.packages.packages;
       devShells = results.devshells.devShells;
+      formatter = results.formatter.formatter;
       hostResult = results.hosts;
 
       userChecks = filterPlatforms system (buildAll s.scope found.checks);
@@ -63,6 +67,6 @@ in
         if ac != null then ac system else { };
     in
     {
-      checks = hostAutoChecks // pkgChecks // devshellChecks // userChecks;
+      checks = hostAutoChecks // pkgChecks // { pkgs-formatter = formatter; } // devshellChecks // userChecks;
     };
 }
