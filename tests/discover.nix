@@ -32,6 +32,8 @@ in
   testFullHosts.expr = sort (names (d "full").hosts);
   testFullHosts.expected = [
     "custom"
+    "db"
+    "monitoring"
     "myhost"
     "mymac"
   ];
