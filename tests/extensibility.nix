@@ -72,12 +72,24 @@ in
     ];
   };
   testUnknownModuleTypeSkipped = {
-    expr = buildModules {
-      discovered = {
-        flake = scanDir (fixtures + "/full/modules/nixos");
+    expr =
+      let
+        result = buildModules {
+          discovered = {
+            flake = scanDir (fixtures + "/full/modules/nixos");
+          };
+        };
+      in
+      {
+        hasAlias = result ? flakeModules;
+        hasHierarchy = result ? modules;
+        hierarchyKeys = builtins.attrNames result.modules;
       };
+    expected = {
+      hasAlias = false;
+      hasHierarchy = true;
+      hierarchyKeys = [ "flake" ];
     };
-    expected = { };
   };
   testExtraModuleTypes = {
     expr =
@@ -90,11 +102,11 @@ in
         };
       in
       {
-        keys = builtins.attrNames result;
+        keys = builtins.sort builtins.lessThan (builtins.attrNames result);
         modNames = builtins.attrNames (result.flakeModules or { });
       };
     expected = {
-      keys = [ "flakeModules" ];
+      keys = [ "flakeModules" "modules" ];
       modNames = [ "mymod" ];
     };
   };

@@ -57,14 +57,16 @@ let
           path;
 
       built = mapAttrs (_: mapAttrs (_: importModule)) discovered;
+
+      aliased = foldl' (
+        acc: t:
+        let
+          alias = moduleTypes.${t} or null;
+        in
+        if alias != null then acc // { ${alias} = built.${t}; } else acc
+      ) { } (attrNames discovered);
     in
-    foldl' (
-      acc: t:
-      let
-        alias = moduleTypes.${t} or null;
-      in
-      if alias != null then acc // { ${alias} = built.${t}; } else acc
-    ) { } (attrNames discovered);
+    aliased // (if built != { } then { modules = built; } else { });
 in
 {
   name = "modules";

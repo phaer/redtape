@@ -12,8 +12,18 @@ let
 in
 {
   testOutputKeys = {
-    expr = builtins.attrNames full;
-    expected = [ "nixosModules" ];
+    expr = builtins.sort builtins.lessThan (builtins.attrNames full);
+    expected = [ "modules" "nixosModules" ];
+  };
+
+  testModulesHierarchy = {
+    expr = builtins.sort builtins.lessThan (builtins.attrNames full.modules);
+    expected = [ "darwin" "home" "nixos" ];
+  };
+
+  testModulesNixosMatchesNixosModules = {
+    expr = builtins.attrNames full.modules.nixos;
+    expected = builtins.attrNames full.nixosModules;
   };
 
   testNixosModuleNames = {
