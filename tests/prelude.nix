@@ -119,6 +119,7 @@ let
             throw "red-tape: unknown host type '${info.type}' for '${name}'"
           else
             {
+              type = info.type;
               outputKey = builder.outputKey;
               value = builder.build {
                 inherit
@@ -146,28 +147,22 @@ let
       ) { } (attrNames loaded);
       autoChecks =
         system:
-        foldl' (
-          acc: key:
-          let
-            hosts = byOutputKey.${key} or { };
-          in
-          acc
-          // listToAttrs (
-            filter (x: x != null) (
-              map (
-                n:
-                let
-                  s = hosts.${n}.config.nixpkgs.hostPlatform.system or null;
-                in
-                if s == system then
-                  {
-                    name = "${key}-${n}";
-                    value = hosts.${n}.config.system.build.toplevel;
-                  }
-                else
-                  null
-              ) (attrNames hosts)
-            )
+        listToAttrs (
+          filter (x: x != null) (
+            map (
+              n:
+              let
+                h = loaded.${n};
+                s = h.value.config.nixpkgs.hostPlatform.system or null;
+              in
+              if s == system then
+                {
+                  name = "${h.type}-${n}";
+                  value = h.value.config.system.build.toplevel;
+                }
+              else
+                null
+            ) (attrNames loaded)
           )
         ) { } (attrNames byOutputKey);
     in
