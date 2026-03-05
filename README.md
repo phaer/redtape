@@ -66,11 +66,11 @@ If you keep Nix files in a subdirectory (e.g. `nix/`), pass `prefix = "nix"` to 
 ```nix
 red-tape.mkFlake {
   # Required
-  inputs = { ... };           # Flake inputs (must include self)
+  inputs = { ... };           # Flake inputs
   src = ./.;                  # Project root to scan
 
   # Optional
-  self = inputs.self;         # Defaults to inputs.self
+  self = null;                # Flake self-reference (optional)
   prefix = null;              # Subdirectory prefix (e.g. "nix")
   systems = [ ... ];          # Target systems (default: x86_64-linux, aarch64-linux, aarch64-darwin, x86_64-darwin)
   modules = [];               # Additional adios modules
@@ -167,11 +167,9 @@ red-tape.mkFlake {
 | | red-tape | blueprint | flake-parts |
 |---|---|---|---|
 | Approach | Filesystem conventions | Filesystem conventions | Module options |
-| Module system | [adios-flake](https://github.com/Mic92/adios-flake) | None (pure functions) | NixOS modules |
-| Boilerplate | Minimal | Minimal | More explicit |
-| Extension | Contrib modules | Limited | flake-parts modules |
-| Host support | NixOS + contrib (darwin, home-manager, system-manager) | None | Via modules |
-| Learning curve | Know the directory layout | Know the directory layout | Know the option schema |
+| Built on | [adios-flake](https://github.com/Mic92/adios-flake) | None (pure functions) | NixOS module system |
+| Community | New & small | Medium | Large |
+| Extensible | [adios](https://github.com/adisbladis/adios) modules | No | NixOS modules |
 
 ## License
 
