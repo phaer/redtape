@@ -1,10 +1,10 @@
 # red-tape
 
-> ⚠️ **This is slop.** Written by an LLM, guided by a human(?) who kept
-> saying "make it more elegant" until something stuck. Expect overconfident
-> documentation, undertested edge cases, and questionable design decisions.
-> Use at your own risk — or just use
-> [blueprint](https://github.com/numtide/blueprint).
+> ⚠️ **LLM-assisted.** I used an LLM for prototyping and iteration, but
+> reviewed and shaped each commit myself — I don't think it meaningfully
+> affected the error rate compared to writing it without. The broader social
+> and economic consequences of the "AI" craze are something I'm happy to
+> discuss, but this is not the place.
 
 Convention-based Nix project builder, based on [adios-flake](https://github.com/Mic92/adios-flake) and inspired by [blueprint](https://github.com/numtide/blueprint).
 
